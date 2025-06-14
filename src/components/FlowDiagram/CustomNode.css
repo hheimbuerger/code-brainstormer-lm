@@ -1,0 +1,148 @@
+.custom-node {
+  background: white;
+  border: 1px solid #555;
+  border-radius: 8px;
+  padding: 0;
+  width: 200px;
+  min-height: 100px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+  cursor: default;
+  font-size: 0.6em;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+  transform: scale(0.85);
+  transform-origin: 0 0;
+  /* Prevent text selection during drag */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.custom-node__header {
+  padding: 10px;
+  background-color: #f0f0f0;
+  border-bottom: 1px solid #ccc;
+  font-weight: bold;
+  text-align: center;
+  cursor: grab;
+  user-select: none;
+}
+
+.custom-node__header:active {
+  cursor: grabbing;
+}
+
+/* Ensure the drag handle takes full width of the header */
+.custom-node-drag-handle {
+  width: 100%;
+  height: 100%;
+}
+
+.custom-node__headline {
+  font-size: 1em;
+  font-weight: bold;
+  color: #333;
+  pointer-events: none; /* Make sure text selection still works */
+}
+
+.custom-node__return-value {
+  text-align: center;
+  font-size: 0.8em;
+  color: #555;
+  padding: 8px 10px;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: white;
+}
+
+.custom-node__content {
+  font-size: 0.75em;
+  color: #444;
+  padding: 8px 10px;
+  line-height: 1.3;
+  background-color: white;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* Remove border from the last content item */
+.custom-node__content:last-child {
+  border-bottom: none;
+}
+
+/* Handle styling */
+.react-flow__handle {
+  width: 6px;
+  height: 6px;
+  background-color: #777;
+  border: 1px solid #555;
+}
+
+.react-flow__handle-top {
+  top: -3px;
+}
+
+.react-flow__handle-bottom {
+  bottom: -3px;
+}
+
+/* Make content selectable but not draggable */
+.custom-node > * {
+  user-select: text;
+}
+
+.custom-node .editable-field {
+  pointer-events: auto;
+}
+
+.editable-field {
+  width: 100%;
+  min-height: 1em;
+  padding: 2px 4px;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  transition: border-color 0.2s;
+}
+
+.editable-field:hover {
+  border-color: #ccc;
+  background-color: #f9f9f9;
+  cursor: text;
+}
+
+.editable-field:focus {
+  outline: none;
+  border-color: #4d90fe;
+  box-shadow: 0 0 0 1px #4d90fe;
+  background: white;
+}
+
+textarea.editable-field {
+  resize: none;
+  overflow: hidden;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  background: white;
+  border: 1px solid #4d90fe;
+  box-shadow: 0 0 0 1px #4d90fe;
+}
+
+/* Handle styling */
+.react-flow__handle {
+  width: 6px;
+  height: 6px;
+  background-color: #777;
+  border: 1px solid #555;
+  z-index: 10;
+}
+
+.react-flow__handle-top {
+  top: -3px;
+}
+
+.react-flow__handle-bottom {
+  bottom: -3px;
+}
