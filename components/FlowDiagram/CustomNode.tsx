@@ -1,3 +1,5 @@
+'use client';
+
 import { memo, useState, useRef, useEffect } from 'react';
 import { Handle, Position } from 'reactflow';
 import type { NodeProps } from 'reactflow';
