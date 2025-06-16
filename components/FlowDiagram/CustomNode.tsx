@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useState, useRef, useEffect } from 'react';
+import axios from 'axios';
 import { Handle, Position } from 'reactflow';
 import type { NodeProps } from 'reactflow';
 import './CustomNode.css';
@@ -21,7 +22,9 @@ const EditableField = ({
   className = '',
   isItalic = false,
   isBold = false,
-}: EditableFieldProps) => {
+  nodeId,
+  fieldName,
+}: EditableFieldProps & { nodeId?: string; fieldName?: string }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState(value);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -37,6 +40,14 @@ const EditableField = ({
 
   const handleSave = () => {
     if (inputValue.trim() !== '' || value === '') {
+      if (inputValue !== value && nodeId && fieldName) {
+        axios.post('/api/log-edit', {
+          nodeId,
+          field: fieldName,
+          oldValue: value,
+          newValue: inputValue
+        });
+      }
       onSave(inputValue);
     }
     setIsEditing(false);
@@ -135,6 +146,8 @@ function CustomNode({ data, id, selected, onNodeDataChange }: CustomNodeProps) {
           placeholder="Enter headline"
           className="custom-node__headline"
           isBold
+          nodeId={nodeId}
+          fieldName="headline"
         />
       </div>
       
@@ -144,6 +157,8 @@ function CustomNode({ data, id, selected, onNodeDataChange }: CustomNodeProps) {
           onSave={(value) => handleFieldChange('returnValue', value)}
           placeholder="return type"
           isItalic
+          nodeId={nodeId}
+          fieldName="returnValue"
         />
       </div>
       
@@ -152,6 +167,8 @@ function CustomNode({ data, id, selected, onNodeDataChange }: CustomNodeProps) {
           value={data.content1 || ''}
           onSave={(value) => handleFieldChange('content1', value)}
           placeholder="Enter content"
+          nodeId={nodeId}
+          fieldName="content1"
         />
       </div>
       
@@ -160,6 +177,8 @@ function CustomNode({ data, id, selected, onNodeDataChange }: CustomNodeProps) {
           value={data.content2 || ''}
           onSave={(value) => handleFieldChange('content2', value)}
           placeholder="Enter content"
+          nodeId={nodeId}
+          fieldName="content2"
         />
       </div>
       
