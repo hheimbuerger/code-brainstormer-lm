@@ -4,6 +4,7 @@ import { memo, useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { Handle, Position } from 'reactflow';
 import type { NodeProps } from 'reactflow';
+import { useNodesStore, type CustomNodeData } from '../../store/useNodesStore';
 import './CustomNode.css';
 
 type EditableFieldProps = {
@@ -103,26 +104,17 @@ const EditableField = ({
   );
 };
 
-// Define the data type for our custom node
-type CustomNodeData = {
-  id: string;
-  headline: string;
-  returnValue?: string;
-  content1?: string;
-  content2?: string;
-};
+// CustomNodeData is now imported from useNodesStore.ts
 
-type CustomNodeProps = NodeProps<CustomNodeData> & {
-  onNodeDataChange?: (nodeId: string, field: string, value: string) => void;
-};
+type CustomNodeProps = NodeProps<CustomNodeData>;
 
-function CustomNode({ data, id, selected, onNodeDataChange }: CustomNodeProps) {
+function CustomNode({ data, id, selected }: CustomNodeProps) {
   const nodeId = id || data.id;
   
+    const updateNodeField = useNodesStore((state) => state.updateNodeField);
+
   const handleFieldChange = (field: keyof Omit<CustomNodeData, 'id'>, value: string) => {
-    if (onNodeDataChange) {
-      onNodeDataChange(nodeId, field, value);
-    }
+    updateNodeField(nodeId, field, value);
   };
 
   const handleNodeClick = (e: React.MouseEvent) => {
