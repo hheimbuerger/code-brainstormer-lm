@@ -2,6 +2,7 @@
 
 import { memo, useState, useRef, useEffect } from 'react';
 import axios from 'axios';
+import { useMutation } from '@tanstack/react-query';
 import { Handle, Position } from 'reactflow';
 import type { NodeProps } from 'reactflow';
 import { useNodesStore, type CustomNodeData } from '../../store/useNodesStore';
@@ -39,14 +40,26 @@ const EditableField = ({
     }
   }, [isEditing]);
 
+  // React Query mutation for log-edit
+  const logEditMutation = useMutation({
+    mutationFn: async ({ nodeId, field, oldValue, newValue }: { nodeId: string; field: string; oldValue: string; newValue: string }) => {
+      return axios.post('/api/log-edit', {
+        nodeId,
+        field,
+        oldValue,
+        newValue,
+      });
+    },
+  });
+
   const handleSave = () => {
     if (inputValue.trim() !== '' || value === '') {
       if (inputValue !== value && nodeId && fieldName) {
-        axios.post('/api/log-edit', {
+        logEditMutation.mutate({
           nodeId,
           field: fieldName,
           oldValue: value,
-          newValue: inputValue
+          newValue: inputValue,
         });
       }
       onSave(inputValue);
@@ -70,19 +83,30 @@ const EditableField = ({
 
   if (isEditing) {
     return (
-      <textarea
-        ref={inputRef}
-        className={`editable-field ${className}`}
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        onBlur={handleBlur}
-        placeholder={placeholder}
-        style={{
-          fontStyle: isItalic ? 'italic' : 'normal',
-          fontWeight: isBold ? 'bold' : 'normal',
-        }}
-      />
+      <div style={{ position: 'relative' }}>
+        <textarea
+          ref={inputRef}
+          className={`editable-field ${className}`}
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
+          placeholder={placeholder}
+          style={{
+            fontStyle: isItalic ? 'italic' : 'normal',
+            fontWeight: isBold ? 'bold' : 'normal',
+          }}
+        />
+        {logEditMutation.isPending && (
+          <span className="editable-field__status" style={{ position: 'absolute', right: 4, top: 4, fontSize: 10, color: '#888' }}>Saving...</span>
+        )}
+        {logEditMutation.isError && (
+          <span className="editable-field__status" style={{ position: 'absolute', right: 4, top: 4, fontSize: 10, color: 'red' }}>Error</span>
+        )}
+        {logEditMutation.isSuccess && (
+          <span className="editable-field__status" style={{ position: 'absolute', right: 4, top: 4, fontSize: 10, color: 'green' }}>Saved</span>
+        )}
+      </div>
     );
   }
 
