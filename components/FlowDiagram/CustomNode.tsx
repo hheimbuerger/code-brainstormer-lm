@@ -5,7 +5,9 @@ import axios from 'axios';
 import { useMutation } from '@tanstack/react-query';
 import { Handle, Position } from 'reactflow';
 import type { NodeProps } from 'reactflow';
-import { useNodesStore, type CustomNodeData } from '../../store/useNodesStore';
+import { useCodebaseStore } from '../../store/useCodebaseStore';
+import { GenField } from '../../store/codebase.types';
+import type { GenMethod } from '../../store/codebase.types';
 import './CustomNode.css';
 
 type EditableFieldProps = {
@@ -130,15 +132,48 @@ const EditableField = ({
 
 // CustomNodeData is now imported from useNodesStore.ts
 
+// Custom node data type that matches what we store in React Flow nodes
+type CustomNodeData = {
+  id: string;
+  methodIndex: number;
+};
+
 type CustomNodeProps = NodeProps<CustomNodeData>;
 
 function CustomNode({ data, id, selected }: CustomNodeProps) {
   const nodeId = id || data.id;
+  const methodIndex = data.methodIndex;
   
-    const updateNodeField = useNodesStore((state) => state.updateNodeField);
+  const { genMethods, updateGenMethod } = useCodebaseStore();
+  const method = genMethods[methodIndex];
 
-  const handleFieldChange = (field: keyof Omit<CustomNodeData, 'id'>, value: string) => {
-    updateNodeField(nodeId, field, value);
+  const handleFieldChange = (field: 'headline' | 'returnValue' | 'content1' | 'content2', value: string) => {
+    if (methodIndex === undefined || !method) return;
+    
+    // Map the old field names to the new GenMethod structure
+    const updates: Partial<GenMethod> = {};
+    
+    // Helper function to create a new GenField with updated descriptor
+    const createUpdatedField = (field: GenField, descriptor: string): GenField => {
+      return new GenField(descriptor, field.state, field.code);
+    };
+    
+    switch (field) {
+      case 'headline':
+        updates.identifier = createUpdatedField(method.identifier, value);
+        break;
+      case 'returnValue':
+        updates.returnValue = createUpdatedField(method.returnValue, value);
+        break;
+      case 'content1':
+        updates.specification = createUpdatedField(method.specification, value);
+        break;
+      case 'content2':
+        updates.implementation = createUpdatedField(method.implementation, value);
+        break;
+    }
+    
+    updateGenMethod(methodIndex, updates);
   };
 
   const handleNodeClick = (e: React.MouseEvent) => {
@@ -157,19 +192,19 @@ function CustomNode({ data, id, selected }: CustomNodeProps) {
       
       <div className="custom-node__header custom-node-drag-handle">
         <EditableField
-          value={data.headline}
+          value={method?.identifier?.descriptor || ''}
           onSave={(value) => handleFieldChange('headline', value)}
-          placeholder="Enter headline"
+          placeholder="Enter method name"
           className="custom-node__headline"
           isBold
           nodeId={nodeId}
-          fieldName="headline"
+          fieldName="identifier"
         />
       </div>
       
       <div className="custom-node__return-value">
         <EditableField
-          value={data.returnValue || ''}
+          value={method?.returnValue?.code || ''}
           onSave={(value) => handleFieldChange('returnValue', value)}
           placeholder="return type"
           isItalic
@@ -180,21 +215,21 @@ function CustomNode({ data, id, selected }: CustomNodeProps) {
       
       <div className="custom-node__content">
         <EditableField
-          value={data.content1 || ''}
+          value={method?.specification?.code || ''}
           onSave={(value) => handleFieldChange('content1', value)}
-          placeholder="Enter content"
+          placeholder="Enter specification"
           nodeId={nodeId}
-          fieldName="content1"
+          fieldName="specification"
         />
       </div>
       
       <div className="custom-node__content">
         <EditableField
-          value={data.content2 || ''}
+          value={method?.implementation?.code || ''}
           onSave={(value) => handleFieldChange('content2', value)}
-          placeholder="Enter content"
+          placeholder="Enter implementation"
           nodeId={nodeId}
-          fieldName="content2"
+          fieldName="implementation"
         />
       </div>
       

@@ -10,7 +10,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 
 import CustomNode from './CustomNode';
-import { useNodesStore } from '../../store/useNodesStore';
+import { useCodebaseStore } from '../../store/useCodebaseStore';
 
 // Define nodeTypes and edgeTypes outside the component for stability
 const nodeTypes: NodeTypes = {
@@ -20,9 +20,8 @@ const nodeTypes: NodeTypes = {
 const edgeTypes: EdgeTypes = {};
 
 export default function FlowDiagram() {
-  // The store is now the single source of truth.
-  // We select the state and the actions from the store.
-  const { nodes, edges, onNodesChange, onEdgesChange } = useNodesStore();
+  // Use the codebase store for all flow-related state
+  const { nodes, edges, onNodesChange, onEdgesChange } = useCodebaseStore();
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
