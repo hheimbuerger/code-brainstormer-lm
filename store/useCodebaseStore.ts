@@ -1,7 +1,8 @@
-import { applyEdgeChanges, applyNodeChanges } from 'reactflow';
+
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { exampleExternalClasses, exampleGenClass, exampleGenMethods } from '../data/generated-code-example';
+
 import {
   AspectState,
   GenField,
@@ -11,9 +12,7 @@ import {
   type GenMethodData
 } from './codebase.types';
 
-// Debug log the example data
-console.log('Example GenClass:', exampleGenClass.toString());
-console.log('Example GenMethods:', exampleGenMethods.map(m => m.toString()));
+
 
 // Helper function to create a new GenField from partial data
 const createGenField = (field: Partial<GenFieldData> = {}): GenField => {
@@ -46,27 +45,11 @@ export const useCodebaseStore = create<CodebaseState>()(
       genMethods: exampleGenMethods,
       externalClasses: exampleExternalClasses,
       
-      // React Flow state
-      nodes: exampleGenMethods.map((method, index) => ({
-        id: `method-${index}`,
-        type: 'custom',
-        position: method.position,
-        data: {
-          id: `method-${index}`,
-          methodIndex: index
-        }
-      })),
-      edges: [
-        // Hardcoded edge from first method to second method
-        {
-          id: 'edge-0-1',
-          source: 'method-0',
-          target: 'method-1',
-          type: 'smoothstep',
-          animated: false,
-        },
-      ],
       
+      
+      // Persist graph (currently no-op, kept for future)
+      saveGraph: (nodes: unknown, edges: unknown) => {},
+
       // Update the class fields
       updateGenClass: (field) => {
         const updatedClass = createGenField({
@@ -79,9 +62,12 @@ export const useCodebaseStore = create<CodebaseState>()(
       
       // Add a new method
       addGenMethod: () => {
-        set((state) => ({
-          genMethods: [...state.genMethods, createGenMethod()]
-        }), false, 'addGenMethod');
+        set((state) => {
+          const genMethods = [...state.genMethods, createGenMethod()];
+          return {
+            genMethods,
+          };
+        }, false, 'addGenMethod');
       },
       
       // Update an existing method
@@ -96,21 +82,26 @@ export const useCodebaseStore = create<CodebaseState>()(
             parameters: { ...existingMethod.parameters, ...method.parameters },
             specification: { ...existingMethod.specification, ...method.specification },
             implementation: { ...existingMethod.implementation, ...method.implementation },
-            position: { ...existingMethod.position, ...method.position }
+            
           });
           
-          const updatedMethods = [...state.genMethods];
-          updatedMethods[index] = updatedMethod;
+          const genMethods = [...state.genMethods];
+          genMethods[index] = updatedMethod;
           
-          return { genMethods: updatedMethods };
+          return {
+            genMethods,
+          };
         }, false, 'updateGenMethod');
       },
       
       // Remove a method by index
       removeGenMethod: (index) => {
-        set((state) => ({
-          genMethods: state.genMethods.filter((_, i) => i !== index)
-        }), false, 'removeGenMethod');
+        set((state) => {
+          const genMethods = state.genMethods.filter((_, i) => i !== index);
+          return {
+            genMethods,
+          };
+        }, false, 'removeGenMethod');
       },
       
       // Add a new external class
@@ -128,52 +119,7 @@ export const useCodebaseStore = create<CodebaseState>()(
         }), false, 'removeExternalClass');
       },
       
-      // React Flow handlers
-      onNodesChange: (changes) => {
-        set((state) => ({
-          nodes: applyNodeChanges(changes, state.nodes)
-        }), false, 'onNodesChange');
-      },
       
-      onEdgesChange: (changes) => {
-        set((state) => ({
-          edges: applyEdgeChanges(changes, state.edges)
-        }), false, 'onEdgesChange');
-      },
-      
-      updateNodePosition: (id, position) => {
-        set((state) => {
-          const nodeIndex = state.nodes.findIndex(node => node.id === id);
-          if (nodeIndex === -1) return state;
-          
-          const methodIndex = state.nodes[nodeIndex].data.methodIndex;
-          const methodToUpdate = state.genMethods[methodIndex];
-          
-          // Create a new GenMethod instance with the updated position
-          const updatedMethod = new GenMethod(
-            methodToUpdate.identifier,
-            methodToUpdate.returnValue,
-            methodToUpdate.parameters,
-            methodToUpdate.specification,
-            methodToUpdate.implementation,
-            position
-          );
-          
-          // Create a new array with the updated method
-          const updatedGenMethods = [...state.genMethods];
-          updatedGenMethods[methodIndex] = updatedMethod;
-          
-          // Update the corresponding node's position
-          const updatedNodes = state.nodes.map(node => 
-            node.id === id ? { ...node, position } : node
-          );
-          
-          return {
-            nodes: updatedNodes,
-            genMethods: updatedGenMethods
-          };
-        }, false, 'updateNodePosition');
-      }
     }),
     {
       name: 'CodebaseStore',

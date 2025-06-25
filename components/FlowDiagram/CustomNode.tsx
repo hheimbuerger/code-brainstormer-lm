@@ -144,8 +144,9 @@ function CustomNode({ data, id, selected }: CustomNodeProps) {
   const nodeId = id || data.id;
   const methodIndex = data.methodIndex;
   
-  const { genMethods, updateGenMethod } = useCodebaseStore();
-  const method = genMethods[methodIndex];
+  // Select only the required slice so the node re-renders whenever this method changes
+  const method = useCodebaseStore(state => state.genMethods[methodIndex]);
+  const updateGenMethod = useCodebaseStore(state => state.updateGenMethod);
 
   const handleFieldChange = (field: 'headline' | 'returnValue' | 'content1' | 'content2', value: string) => {
     if (methodIndex === undefined || !method) return;
@@ -204,7 +205,7 @@ function CustomNode({ data, id, selected }: CustomNodeProps) {
       
       <div className="custom-node__return-value">
         <EditableField
-          value={method?.returnValue?.code || ''}
+          value={method?.returnValue?.descriptor || ''}
           onSave={(value) => handleFieldChange('returnValue', value)}
           placeholder="return type"
           isItalic
@@ -215,7 +216,7 @@ function CustomNode({ data, id, selected }: CustomNodeProps) {
       
       <div className="custom-node__content">
         <EditableField
-          value={method?.specification?.code || ''}
+          value={method?.specification?.descriptor || ''}
           onSave={(value) => handleFieldChange('content1', value)}
           placeholder="Enter specification"
           nodeId={nodeId}
@@ -225,7 +226,7 @@ function CustomNode({ data, id, selected }: CustomNodeProps) {
       
       <div className="custom-node__content">
         <EditableField
-          value={method?.implementation?.code || ''}
+          value={method?.implementation?.descriptor || ''}
           onSave={(value) => handleFieldChange('content2', value)}
           placeholder="Enter implementation"
           nodeId={nodeId}
