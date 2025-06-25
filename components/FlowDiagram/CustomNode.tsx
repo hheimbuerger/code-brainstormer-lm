@@ -6,9 +6,25 @@ import { useMutation } from '@tanstack/react-query';
 import { Handle, Position } from 'reactflow';
 import type { NodeProps } from 'reactflow';
 import { useCodebaseStore } from '../../store/useCodebaseStore';
-import { CodeField } from '../../store/codebase.types';
+import { CodeAspect, AspectState } from '../../store/codebase.types';
 import type { CodeMethod } from '../../store/codebase.types';
 import './CustomNode.css';
+
+// helper to map AspectState -> emoji icon
+const getIconForState = (s?: AspectState) => {
+  switch (s) {
+    case AspectState.UNSET:
+      return '⚪';
+    case AspectState.AUTOGEN:
+      return '🤖';
+    case AspectState.EDITED:
+      return '✏️';
+    case AspectState.LOCKED:
+      return '🔒';
+    default:
+      return '';
+  }
+};
 
 type EditableFieldProps = {
   value: string;
@@ -148,29 +164,38 @@ function CustomNode({ data, id, selected }: CustomNodeProps) {
   const method = useCodebaseStore(state => state.codeMethods[methodIndex]);
   const updateCodeMethod = useCodebaseStore(state => state.updateCodeMethod);
 
-  const handleFieldChange = (field: 'headline' | 'signature' | 'content1' | 'content2', value: string) => {
+  // toggle between LOCKED and AUTOGEN for a field
+  const toggleFieldState = (fieldKey: 'identifier' | 'signature' | 'specification' | 'implementation') => {
+    if (methodIndex === undefined || !method) return;
+    const field = method[fieldKey];
+    const newState = field.state === AspectState.LOCKED ? AspectState.AUTOGEN : AspectState.LOCKED;
+    const updatedField = new CodeAspect(field.descriptor, newState, field.code);
+    updateCodeMethod(methodIndex, { [fieldKey]: updatedField } as Partial<CodeMethod>);
+  };
+
+  const handleFieldChange = (field: 'identifier' | 'signature' | 'specification' | 'implementation', value: string) => {
     if (methodIndex === undefined || !method) return;
     
     // Map the old field names to the new GenMethod structure
     const updates: Partial<CodeMethod> = {};
     
-    // Helper function to create a new CodeField with updated descriptor
-    const createUpdatedField = (field: CodeField, descriptor: string): CodeField => {
-      return new CodeField(descriptor, field.state, field.code);
+    // Helper function to create a new CodeField with updated descriptor and set state to EDITED
+    const createUpdatedField = (field: CodeAspect, descriptor: string, newState: AspectState = AspectState.EDITED): CodeAspect => {
+      return new CodeAspect(descriptor, newState, field.code);
     };
     
     switch (field) {
-      case 'headline':
-        updates.identifier = createUpdatedField(method.identifier, value);
+      case 'identifier':
+        updates.identifier = createUpdatedField(method.identifier, value, AspectState.EDITED);
         break;
       case 'signature':
-        updates.signature = createUpdatedField(method.signature, value);
+        updates.signature = createUpdatedField(method.signature, value, AspectState.EDITED);
         break;
-      case 'content1':
-        updates.specification = createUpdatedField(method.specification, value);
+      case 'specification':
+        updates.specification = createUpdatedField(method.specification, value, AspectState.EDITED);
         break;
-      case 'content2':
-        updates.implementation = createUpdatedField(method.implementation, value);
+      case 'implementation':
+        updates.implementation = createUpdatedField(method.implementation, value, AspectState.EDITED);
         break;
     }
     
@@ -191,47 +216,51 @@ function CustomNode({ data, id, selected }: CustomNodeProps) {
     >
       <Handle type="target" position={Position.Top} />
       
-      <div className="custom-node__header custom-node-drag-handle">
+      <div className="custom-node__header custom-node-drag-handle" style={{position:'relative'}}>
         <EditableField
           value={method?.identifier?.descriptor || ''}
-          onSave={(value) => handleFieldChange('headline', value)}
+          onSave={(value) => handleFieldChange('identifier', value)}
           placeholder="Enter method name"
           className="custom-node__headline"
           isBold
           nodeId={nodeId}
           fieldName="identifier"
         />
+        <span className="field-state-icon" style={{position:'absolute',top:2,right:4,cursor:'pointer'}} onClick={(e)=>{e.stopPropagation(); toggleFieldState('identifier');}}>{getIconForState(method?.identifier?.state)}</span>
       </div>
       
-      <div className="custom-node__return-value">
+      <div className="custom-node__return-value" style={{position:'relative'}}>
         <EditableField
           value={method?.signature?.descriptor || ''}
-          onSave={(value) => handleFieldChange('signature', value) }
+          onSave={(value) => handleFieldChange('signature', value)}
           placeholder="return type"
           isItalic
           nodeId={nodeId}
           fieldName="signature"
         />
+        <span className="field-state-icon" style={{position:'absolute',top:2,right:4,cursor:'pointer'}} onClick={(e)=>{e.stopPropagation(); toggleFieldState('signature');}}>{getIconForState(method?.signature?.state)}</span>
       </div>
       
-      <div className="custom-node__content">
+      <div className="custom-node__content" style={{position:'relative'}}>
         <EditableField
           value={method?.specification?.descriptor || ''}
-          onSave={(value) => handleFieldChange('content1', value)}
+          onSave={(value) => handleFieldChange('specification', value)}
           placeholder="Enter specification"
           nodeId={nodeId}
           fieldName="specification"
         />
+        <span className="field-state-icon" style={{position:'absolute',top:2,right:4,cursor:'pointer'}} onClick={(e)=>{e.stopPropagation(); toggleFieldState('specification');}}>{getIconForState(method?.specification?.state)}</span>
       </div>
       
-      <div className="custom-node__content">
+      <div className="custom-node__content" style={{position:'relative'}}>
         <EditableField
           value={method?.implementation?.descriptor || ''}
-          onSave={(value) => handleFieldChange('content2', value)}
+          onSave={(value) => handleFieldChange('implementation', value)}
           placeholder="Enter implementation"
           nodeId={nodeId}
           fieldName="implementation"
         />
+        <span className="field-state-icon" style={{position:'absolute',top:2,right:4,cursor:'pointer'}} onClick={(e)=>{e.stopPropagation(); toggleFieldState('implementation');}}>{getIconForState(method?.implementation?.state)}</span>
       </div>
       
       <Handle type="source" position={Position.Bottom} id="a" />

@@ -7,13 +7,13 @@ export enum AspectState {
   LOCKED = 'locked'
 }
 
-export interface CodeFieldData {
+export interface CodeAspectData {
   descriptor: string;
   state: AspectState;
   code: string;
 }
 
-export class CodeField implements CodeFieldData {
+export class CodeAspect implements CodeAspectData {
   constructor(
     public descriptor: string = '',
     public state: AspectState = AspectState.UNSET,
@@ -37,19 +37,19 @@ export class CodeField implements CodeFieldData {
 }
 
 export interface CodeMethodData {
-  identifier: Partial<CodeFieldData>;
-  signature: Partial<CodeFieldData>;
-  specification: Partial<CodeFieldData>;
-  implementation: Partial<CodeFieldData>;
+  identifier: Partial<CodeAspectData>;
+  signature: Partial<CodeAspectData>;
+  specification: Partial<CodeAspectData>;
+  implementation: Partial<CodeAspectData>;
 }
 
 export class CodeMethod {
   
   constructor(
-    public identifier: CodeField = new CodeField(),
-    public signature: CodeField = new CodeField(),
-    public specification: CodeField = new CodeField(),
-    public implementation: CodeField = new CodeField(),
+    public identifier: CodeAspect = new CodeAspect(),
+    public signature: CodeAspect = new CodeAspect(),
+    public specification: CodeAspect = new CodeAspect(),
+    public implementation: CodeAspect = new CodeAspect(),
   ) {
     
   }
@@ -79,12 +79,12 @@ export interface FlowNodeData {
 
 export interface CodebaseState {
   // Core data model
-  codeClass: CodeField;
+  codeClass: CodeAspect;
   codeMethods: CodeMethod[];
   externalClasses: string[];
   
   // Core actions
-  updateCodeClass: (field: Partial<CodeField>) => void;
+  updateCodeClass: (field: Partial<CodeAspect>) => void;
   addCodeMethod: () => void;
   updateCodeMethod: (index: number, method: Partial<CodeMethod>) => void;
   removeCodeMethod: (index: number) => void;

@@ -1,7 +1,7 @@
-import { CodeField, CodeMethod, AspectState } from '../store/codebase.types';
+import { CodeAspect, CodeMethod, AspectState } from '../store/codebase.types';
 
 // Example class definition
-export const exampleCodeClass = new CodeField(
+export const exampleCodeClass = new CodeAspect(
   'ExampleClass',
   AspectState.UNSET,
   'class ExampleClass {\n  // Class implementation will be generated here\n}',
@@ -25,9 +25,9 @@ export const exampleCodeMethods: CodeMethod[] = [
   // First method - Process Data
   new CodeMethod(
     // identifier
-    new CodeField('processData', AspectState.EDITED, 'processData'),
+    new CodeAspect('processData', AspectState.EDITED, 'processData'),
     // signature (return type + params merged)
-    new CodeField(
+    new CodeAspect(
       buildSignature(
         'ProcessedData',
         'processData',
@@ -37,13 +37,13 @@ export const exampleCodeMethods: CodeMethod[] = [
       '',
     ),
     // specification
-    new CodeField(
+    new CodeAspect(
       'This node processes the input data and applies transformations.',
       AspectState.AUTOGEN,
       '',
     ),
     // implementation
-    new CodeField(
+    new CodeAspect(
       'Handles data validation and normalization.',
       AspectState.AUTOGEN,
       '',
@@ -52,8 +52,8 @@ export const exampleCodeMethods: CodeMethod[] = [
 
   // Second method - Analyze Results
   new CodeMethod(
-    new CodeField('analyzeResults', AspectState.EDITED, 'analyzeResults'),
-    new CodeField(
+    new CodeAspect('analyzeResults', AspectState.EDITED, 'analyzeResults'),
+    new CodeAspect(
       buildSignature(
         'AnalysisReport',
         'analyzeResults',
@@ -62,12 +62,12 @@ export const exampleCodeMethods: CodeMethod[] = [
       AspectState.AUTOGEN,
       '',
     ),
-    new CodeField(
+    new CodeAspect(
       'Performs analysis on the processed data.',
       AspectState.AUTOGEN,
       '',
     ),
-    new CodeField(
+    new CodeAspect(
       'Generates insights and statistics.',
       AspectState.AUTOGEN,
       '',

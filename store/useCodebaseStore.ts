@@ -4,18 +4,18 @@ import { exampleExternalClasses, exampleCodeClass, exampleCodeMethods } from '..
 
 import {
   AspectState,
-  CodeField,
+  CodeAspect,
   CodeMethod,
   type CodebaseState,
-  type CodeFieldData,
+  type CodeAspectData,
   type CodeMethodData
 } from './codebase.types';
 
 
 
 // Helper function to create a new CodeField from partial data
-const createCodeField = (field: Partial<CodeFieldData> = {}): CodeField => {
-  return new CodeField(
+const createCodeField = (field: Partial<CodeAspectData> = {}): CodeAspect => {
+  return new CodeAspect(
     field.descriptor ?? '',
     field.state ?? AspectState.UNSET,
     field.code ?? ''
@@ -47,7 +47,7 @@ export const useCodebaseStore = create<CodebaseState>()(
       saveGraph: (nodes: unknown, edges: unknown) => {},
 
       // Update the class fields
-      updateCodeClass: (field: Partial<CodeField>) => {
+      updateCodeClass: (field: Partial<CodeAspect>) => {
         const updatedClass = createCodeField({
           ...exampleCodeClass,
           ...field
