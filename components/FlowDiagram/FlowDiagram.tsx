@@ -24,12 +24,12 @@ const nodeTypes: NodeTypes = {
 const edgeTypes: EdgeTypes = {};
 
 export default function FlowDiagram() {
-  const genMethods = useCodebaseStore((s) => s.genMethods);
+  const codeMethods = useCodebaseStore((s) => s.codeMethods);
 
 
-  // map genMethods -> initial nodes
+  // map codeMethods -> initial nodes
   const initialNodes = useMemo(() =>
-    genMethods.map((m, i) => ({
+    codeMethods.map((m, i) => ({
       id: `method-${i}`,
       type: 'custom',
       position: { x: 250 * i, y: 100 },
@@ -37,12 +37,12 @@ export default function FlowDiagram() {
         methodIndex: i,
         
       },
-    })), [genMethods]);
+    })), [codeMethods]);
 
     const [nodes, , onNodesChange] = useNodesState(initialNodes);
     // create a simple demo edge between first two nodes if they exist
   const initialEdges = useMemo<Edge[]>(() => {
-    return genMethods.length > 1
+    return codeMethods.length > 1
       ? [
           {
             id: 'edge-0-1',
@@ -53,7 +53,7 @@ export default function FlowDiagram() {
           } as Edge,
         ]
       : [];
-  }, [genMethods.length]);
+  }, [codeMethods.length]);
 
   const [edges, , onEdgesChange] = useEdgesState<Edge[]>(initialEdges);
 

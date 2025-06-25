@@ -1,62 +1,76 @@
-import { GenField, GenMethod, AspectState } from '../store/codebase.types';
+import { CodeField, CodeMethod, AspectState } from '../store/codebase.types';
 
 // Example class definition
-export const exampleGenClass = new GenField(
+export const exampleCodeClass = new CodeField(
   'ExampleClass',
-  AspectState.PLANNED,
-  'class ExampleClass {\n  // Class implementation will be generated here\n}'
+  AspectState.UNSET,
+  'class ExampleClass {\n  // Class implementation will be generated here\n}',
 );
 
-// Example external classes that this class depends on
 export const exampleExternalClasses = [
   'java.util.List',
   'com.example.utilities.DataValidator',
-  'com.example.models.DataModel'
+  'com.example.models.DataModel',
 ];
 
+// Helper to create a signature descriptor string
+const buildSignature = (
+  returnType: string,
+  name: string,
+  params: string,
+) => `${returnType} ${name}(${params})`;
+
 // Example methods
-export const exampleGenMethods: GenMethod[] = [
+export const exampleCodeMethods: CodeMethod[] = [
   // First method - Process Data
-  new GenMethod(
-    new GenField('processData', AspectState.EDITED, 'processData'),
-    new GenField('Return Value', AspectState.AUTOGEN, 'ProcessedData'),
-    new GenField(
-      'Parameters',
+  new CodeMethod(
+    // identifier
+    new CodeField('processData', AspectState.EDITED, 'processData'),
+    // signature (return type + params merged)
+    new CodeField(
+      buildSignature(
+        'ProcessedData',
+        'processData',
+        'inputData: DataModel, options: Map<String, Object>',
+      ),
       AspectState.AUTOGEN,
-      'inputData: DataModel, options: Map<String, Object>'
+      '',
     ),
-    new GenField(
-      'Specification', 
-      AspectState.AUTOGEN, 
-      'This node processes the input data and applies transformations.'
+    // specification
+    new CodeField(
+      'This node processes the input data and applies transformations.',
+      AspectState.AUTOGEN,
+      '',
     ),
-    new GenField(
-      'Implementation', 
-      AspectState.AUTOGEN, 
-      'Handles data validation and normalization.'
+    // implementation
+    new CodeField(
+      'Handles data validation and normalization.',
+      AspectState.AUTOGEN,
+      '',
     ),
-    { x: 100, y: 100 }
   ),
-  
+
   // Second method - Analyze Results
-  new GenMethod(
-    new GenField('analyzeResults', AspectState.EDITED, 'analyzeResults'),
-    new GenField('Return Value', AspectState.AUTOGEN, 'AnalysisReport'),
-    new GenField(
-      'Parameters',
+  new CodeMethod(
+    new CodeField('analyzeResults', AspectState.EDITED, 'analyzeResults'),
+    new CodeField(
+      buildSignature(
+        'AnalysisReport',
+        'analyzeResults',
+        'data: List<ProcessedData>, config: AnalysisConfig',
+      ),
       AspectState.AUTOGEN,
-      'data: List<ProcessedData>, config: AnalysisConfig'
+      '',
     ),
-    new GenField(
-      'Specification',
+    new CodeField(
+      'Performs analysis on the processed data.',
       AspectState.AUTOGEN,
-      'Performs analysis on the processed data.'
+      '',
     ),
-    new GenField(
-      'Implementation',
+    new CodeField(
+      'Generates insights and statistics.',
       AspectState.AUTOGEN,
-      'Generates insights and statistics.'
+      '',
     ),
-    { x: 400, y: 100 }
-  )
+  ),
 ];

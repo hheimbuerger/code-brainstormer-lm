@@ -6,8 +6,8 @@ import { useMutation } from '@tanstack/react-query';
 import { Handle, Position } from 'reactflow';
 import type { NodeProps } from 'reactflow';
 import { useCodebaseStore } from '../../store/useCodebaseStore';
-import { GenField } from '../../store/codebase.types';
-import type { GenMethod } from '../../store/codebase.types';
+import { CodeField } from '../../store/codebase.types';
+import type { CodeMethod } from '../../store/codebase.types';
 import './CustomNode.css';
 
 type EditableFieldProps = {
@@ -145,26 +145,26 @@ function CustomNode({ data, id, selected }: CustomNodeProps) {
   const methodIndex = data.methodIndex;
   
   // Select only the required slice so the node re-renders whenever this method changes
-  const method = useCodebaseStore(state => state.genMethods[methodIndex]);
-  const updateGenMethod = useCodebaseStore(state => state.updateGenMethod);
+  const method = useCodebaseStore(state => state.codeMethods[methodIndex]);
+  const updateCodeMethod = useCodebaseStore(state => state.updateCodeMethod);
 
-  const handleFieldChange = (field: 'headline' | 'returnValue' | 'content1' | 'content2', value: string) => {
+  const handleFieldChange = (field: 'headline' | 'signature' | 'content1' | 'content2', value: string) => {
     if (methodIndex === undefined || !method) return;
     
     // Map the old field names to the new GenMethod structure
-    const updates: Partial<GenMethod> = {};
+    const updates: Partial<CodeMethod> = {};
     
-    // Helper function to create a new GenField with updated descriptor
-    const createUpdatedField = (field: GenField, descriptor: string): GenField => {
-      return new GenField(descriptor, field.state, field.code);
+    // Helper function to create a new CodeField with updated descriptor
+    const createUpdatedField = (field: CodeField, descriptor: string): CodeField => {
+      return new CodeField(descriptor, field.state, field.code);
     };
     
     switch (field) {
       case 'headline':
         updates.identifier = createUpdatedField(method.identifier, value);
         break;
-      case 'returnValue':
-        updates.returnValue = createUpdatedField(method.returnValue, value);
+      case 'signature':
+        updates.signature = createUpdatedField(method.signature, value);
         break;
       case 'content1':
         updates.specification = createUpdatedField(method.specification, value);
@@ -174,7 +174,7 @@ function CustomNode({ data, id, selected }: CustomNodeProps) {
         break;
     }
     
-    updateGenMethod(methodIndex, updates);
+    updateCodeMethod(methodIndex, updates);
   };
 
   const handleNodeClick = (e: React.MouseEvent) => {
@@ -205,12 +205,12 @@ function CustomNode({ data, id, selected }: CustomNodeProps) {
       
       <div className="custom-node__return-value">
         <EditableField
-          value={method?.returnValue?.descriptor || ''}
-          onSave={(value) => handleFieldChange('returnValue', value)}
+          value={method?.signature?.descriptor || ''}
+          onSave={(value) => handleFieldChange('signature', value) }
           placeholder="return type"
           isItalic
           nodeId={nodeId}
-          fieldName="returnValue"
+          fieldName="signature"
         />
       </div>
       

@@ -11,12 +11,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   // Initialize the store
   const storeState = useCodebaseStore.getState();
   console.log('Store initialized with state:', {
-    genClass: storeState.genClass,
-    genMethods: storeState.genMethods.map(m => ({
+    codeClass: storeState.codeClass,
+    codeMethods: storeState.codeMethods.map(m => ({
       ...m,
       // Just show method names and positions to avoid too much output
       identifier: m.identifier.descriptor,
-      position: m.position
+      signature: m.signature.descriptor
     }))
   });
   

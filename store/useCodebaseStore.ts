@@ -1,38 +1,36 @@
-
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { exampleExternalClasses, exampleGenClass, exampleGenMethods } from '../data/generated-code-example';
+import { exampleExternalClasses, exampleCodeClass, exampleCodeMethods } from '../data/generated-code-example';
 
 import {
   AspectState,
-  GenField,
-  GenMethod,
+  CodeField,
+  CodeMethod,
   type CodebaseState,
-  type GenFieldData,
-  type GenMethodData
+  type CodeFieldData,
+  type CodeMethodData
 } from './codebase.types';
 
 
 
-// Helper function to create a new GenField from partial data
-const createGenField = (field: Partial<GenFieldData> = {}): GenField => {
-  return new GenField(
+// Helper function to create a new CodeField from partial data
+const createCodeField = (field: Partial<CodeFieldData> = {}): CodeField => {
+  return new CodeField(
     field.descriptor ?? '',
-    field.state ?? AspectState.PLANNED,
+    field.state ?? AspectState.UNSET,
     field.code ?? ''
   );
 };
 
-// Helper function to create a new GenMethod from partial data
-const createGenMethod = (method: Partial<GenMethodData> = {}): GenMethod => {
-  const position = method.position || { x: 0, y: 0 };
-  return new GenMethod(
-    createGenField(method.identifier || {}),
-    createGenField(method.returnValue || {}),
-    createGenField(method.parameters || { descriptor: 'params', state: AspectState.PLANNED, code: '' }),
-    createGenField(method.specification || {}),
-    createGenField(method.implementation || {}),
-    { x: position.x || 0, y: position.y || 0 }
+// Helper function to create a new CodeMethod from partial data
+const createCodeMethod = (method: Partial<CodeMethodData> = {}): CodeMethod => {
+  
+  return new CodeMethod(
+    createCodeField(method.identifier || {}),
+    createCodeField(method.signature || {}),
+
+    createCodeField(method.specification || {}),
+    createCodeField(method.implementation || {})
   );
 };
 
@@ -41,67 +39,66 @@ export const useCodebaseStore = create<CodebaseState>()(
   devtools(
     (set, get) => ({
       // Core state
-      genClass: exampleGenClass,
-      genMethods: exampleGenMethods,
+      codeClass: exampleCodeClass,
+      codeMethods: exampleCodeMethods,
       externalClasses: exampleExternalClasses,
-      
-      
       
       // Persist graph (currently no-op, kept for future)
       saveGraph: (nodes: unknown, edges: unknown) => {},
 
       // Update the class fields
-      updateGenClass: (field) => {
-        const updatedClass = createGenField({
-          ...exampleGenClass,
+      updateCodeClass: (field: Partial<CodeField>) => {
+        const updatedClass = createCodeField({
+          ...exampleCodeClass,
           ...field
         });
         
-        set({ genClass: updatedClass }, false, 'updateGenClass');
+        set({ codeClass: updatedClass }, false, 'updateCodeClass');
       },
       
       // Add a new method
-      addGenMethod: () => {
+      addCodeMethod: () => {
         set((state) => {
-          const genMethods = [...state.genMethods, createGenMethod()];
+          const codeMethods = [...state.codeMethods, createCodeMethod()];
           return {
-            genMethods,
+            codeMethods,
           };
-        }, false, 'addGenMethod');
+        }, false, 'addCodeMethod');
       },
       
       // Update an existing method
-      updateGenMethod: (index, method) => {
+      updateCodeMethod: (index, method) => {
         set((state) => {
-          const existingMethod = state.genMethods[index];
+          const existingMethod = state.codeMethods[index];
           if (!existingMethod) return state;
           
-          const updatedMethod = createGenMethod({
+          const updatedMethod = createCodeMethod({
             identifier: { ...existingMethod.identifier, ...method.identifier },
-            returnValue: { ...existingMethod.returnValue, ...method.returnValue },
-            parameters: { ...existingMethod.parameters, ...method.parameters },
+            signature: { ...existingMethod.signature, ...method.signature },
+            
+            
             specification: { ...existingMethod.specification, ...method.specification },
             implementation: { ...existingMethod.implementation, ...method.implementation },
             
           });
           
-          const genMethods = [...state.genMethods];
-          genMethods[index] = updatedMethod;
+          const codeMethods = [...state.codeMethods];
+          codeMethods[index] = updatedMethod;
           
           return {
-            genMethods,
+            codeMethods,
           };
-        }, false, 'updateGenMethod');
+        }, false, 'updateCodeMethod');
       },
       
       // Remove a method by index
-      removeGenMethod: (index) => {
+      removeCodeMethod: (index) => {
         set((state) => {
-          const genMethods = state.genMethods.filter((_, i) => i !== index);
+          const codeMethods = state.codeMethods.filter((_, i) => i !== index);
           return {
-            genMethods,
+            codeMethods,
           };
-        }, false, 'removeGenMethod');
+        }, false, 'removeCodeMethod');
       },
       
       // Add a new external class
@@ -118,7 +115,6 @@ export const useCodebaseStore = create<CodebaseState>()(
           externalClasses: state.externalClasses.filter((_, i) => i !== index)
         }), false, 'removeExternalClass');
       },
-      
       
     }),
     {

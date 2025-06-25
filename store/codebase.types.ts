@@ -1,21 +1,22 @@
 import { type Node, type Edge, type NodeChange, type EdgeChange } from 'reactflow';
 
 export enum AspectState {
-  PLANNED = 'planned',
+  UNSET = 'unset',
   AUTOGEN = 'autogen',
-  EDITED = 'edited'
+  EDITED = 'edited',
+  LOCKED = 'locked'
 }
 
-export interface GenFieldData {
+export interface CodeFieldData {
   descriptor: string;
   state: AspectState;
   code: string;
 }
 
-export class GenField implements GenFieldData {
+export class CodeField implements CodeFieldData {
   constructor(
     public descriptor: string = '',
-    public state: AspectState = AspectState.PLANNED,
+    public state: AspectState = AspectState.UNSET,
     public code: string = ''
   ) {}
 
@@ -35,47 +36,37 @@ export class GenField implements GenFieldData {
   }
 }
 
-export interface Position {
-  x: number;
-  y: number;
+export interface CodeMethodData {
+  identifier: Partial<CodeFieldData>;
+  signature: Partial<CodeFieldData>;
+  specification: Partial<CodeFieldData>;
+  implementation: Partial<CodeFieldData>;
 }
 
-export interface GenMethodData {
-  identifier: Partial<GenFieldData>;
-  returnValue: Partial<GenFieldData>;
-  parameters: Partial<GenFieldData>;
-  specification: Partial<GenFieldData>;
-  implementation: Partial<GenFieldData>;
-  position?: Partial<Position>;
-}
-
-export class GenMethod {
-  position: Position;
+export class CodeMethod {
   
   constructor(
-    public identifier: GenField = new GenField(),
-    public returnValue: GenField = new GenField(),
-    public parameters: GenField = new GenField(),
-    public specification: GenField = new GenField(),
-    public implementation: GenField = new GenField(),
-    position?: Position
+    public identifier: CodeField = new CodeField(),
+    public signature: CodeField = new CodeField(),
+    public specification: CodeField = new CodeField(),
+    public implementation: CodeField = new CodeField(),
   ) {
-    this.position = position || { x: 0, y: 0 };
+    
   }
 
   // For better string representation in logs and Redux DevTools
   toString() {
-    return `Method: ${this.identifier.descriptor} -> ${this.returnValue.descriptor} (${this.position.x},${this.position.y})`;
+    return `Method: ${this.identifier.descriptor} :: ${this.signature.descriptor}`;
   }
   
   // For custom JSON serialization
   toJSON() {
     return {
       identifier: this.identifier,
-      returnValue: this.returnValue,
+      signature: this.signature,
       specification: this.specification,
       implementation: this.implementation,
-      position: this.position,
+      
       _summary: this.toString()
     };
   }
@@ -83,21 +74,20 @@ export class GenMethod {
 
 // Data structure for React Flow nodes
 export interface FlowNodeData {
-  id: string;
   methodIndex: number;
 }
 
 export interface CodebaseState {
   // Core data model
-  genClass: GenField;
-  genMethods: GenMethod[];
+  codeClass: CodeField;
+  codeMethods: CodeMethod[];
   externalClasses: string[];
   
   // Core actions
-  updateGenClass: (field: Partial<GenField>) => void;
-  addGenMethod: () => void;
-  updateGenMethod: (index: number, method: Partial<GenMethod>) => void;
-  removeGenMethod: (index: number) => void;
+  updateCodeClass: (field: Partial<CodeField>) => void;
+  addCodeMethod: () => void;
+  updateCodeMethod: (index: number, method: Partial<CodeMethod>) => void;
+  removeCodeMethod: (index: number) => void;
   
   // External classes management
   addExternalClass: (className: string) => void;
@@ -108,5 +98,5 @@ export interface CodebaseState {
   edges: Edge[];
   onNodesChange: (changes: NodeChange[]) => void;
   onEdgesChange: (changes: EdgeChange[]) => void;
-  updateNodePosition: (id: string, position: { x: number; y: number }) => void;
+  updateNodePosition: (id: string) => void;
 }
