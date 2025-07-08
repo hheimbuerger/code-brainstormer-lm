@@ -323,7 +323,11 @@ function CustomNode(props: CustomNodeProps) {
       className={`custom-node ${selected ? 'selected' : ''}`}
       onClick={handleNodeClick}
     >
-      <Handle type="target" position={Position.Top} />
+      {/* invisible target handles on all four sides for automatic routing */}
+      <Handle type="target" position={Position.Top} id="t" style={{ opacity: 0 }} isConnectable={false} />
+      <Handle type="target" position={Position.Right} id="r" style={{ opacity: 0 }} isConnectable={false} />
+      <Handle type="target" position={Position.Bottom} id="b" style={{ opacity: 0 }} isConnectable={false} />
+      <Handle type="target" position={Position.Left} id="l" style={{ opacity: 0 }} isConnectable={false} />
 
       <div className="custom-node__header custom-node-drag-handle" style={{position:'relative'}}>
         <EditableField

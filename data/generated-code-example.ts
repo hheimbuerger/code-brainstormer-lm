@@ -25,7 +25,7 @@ export const exampleCodeMethods: CodeMethod[] = [
   // First method - Process Data
   new CodeMethod(
     // identifier
-    new CodeAspect('notProcessData', AspectState.EDITED, 'notProcessData'),
+    new CodeAspect('start', AspectState.EDITED, 'start'),
     // signature (return type + params merged)
     new CodeAspect(
       buildSignature(
@@ -44,7 +44,8 @@ export const exampleCodeMethods: CodeMethod[] = [
     ),
     // implementation
     new CodeAspect(
-      'Lorem ipsum dolor sit amet, consectetur formatText("lorem_ipsum") adipiscing elit. Sed do eiusmod tempor incididunt ut labore processData(3, 5) et dolore magna aliqua.',
+      // 'Lorem ipsum dolor sit amet, consectetur formatText("lorem_ipsum") adipiscing elit. Sed do eiusmod tempor incididunt ut labore processData(3, 5) et dolore magna aliqua.',
+      'formatText(1)',
       AspectState.AUTOGEN,
       '',
     ),
@@ -68,7 +69,7 @@ export const exampleCodeMethods: CodeMethod[] = [
       '',
     ),
     new CodeAspect(
-      'Generates insights and statistics.',
+      'processData(2)',
       AspectState.AUTOGEN,
       '',
     ),
@@ -78,17 +79,22 @@ export const exampleCodeMethods: CodeMethod[] = [
   new CodeMethod(
     new CodeAspect('processData', AspectState.EDITED, 'processData'),
     new CodeAspect(
-      buildSignature('void', 'processData', 'input: any'),
+      buildSignature(
+        'ProcessedData',
+        'processData',
+        'inputData: DataModel, options: Map<String, Object>',
+      ),
+      AspectState.AUTOGEN,
+      '',
+    ),
+    // specification
+    new CodeAspect(
+      'This node processes the input data and applies transformations.',
       AspectState.AUTOGEN,
       '',
     ),
     new CodeAspect(
-      'Placeholder specification for processData.',
-      AspectState.AUTOGEN,
-      '',
-    ),
-    new CodeAspect(
-      'Placeholder implementation.',
+      'start(3)',
       AspectState.AUTOGEN,
       '',
     ),
