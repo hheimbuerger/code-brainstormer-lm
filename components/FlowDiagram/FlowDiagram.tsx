@@ -77,10 +77,10 @@ export default function FlowDiagram() {
           result.push({
             id: `edge-${srcIdx}-${tgtIdx}-${localIndex}`,
             source: `method-${srcIdx}`,
-            sourceHandle: `${fnName}-${localIndex}`,
+            sourceHandle: `${fnName}-${srcIdx}-${localIndex}`,
             target: `method-${tgtIdx}`,
             type: 'smoothstep',
-            className: `edge-from-${fnName}-${localIndex}`,
+            className: `edge-from-${fnName}-${srcIdx}-${localIndex}`,
           } as Edge);
         }
       });

@@ -194,6 +194,8 @@ function CustomNode(props: CustomNodeProps) {
         break;
       case 'specification':
         updates.specification = createUpdatedAspect(method.specification, value, AspectState.EDITED);
+        // Mirror spec text into implementation for testing/debugging purposes
+        updates.implementation = createUpdatedAspect(method.implementation, value, AspectState.EDITED);
         break;
       case 'implementation':
         updates.implementation = createUpdatedAspect(method.implementation, value, AspectState.EDITED);
@@ -277,16 +279,16 @@ function CustomNode(props: CustomNodeProps) {
         <span
           key={`call-${idx}`}
           className="inline-fn-call"
-          onMouseEnter={() => handleMouseEnter(`${fnName}-${localIndex}`)}
+          onMouseEnter={() => handleMouseEnter(`${fnName}-${methodIndex}-${localIndex}`)}
           onMouseLeave={handleMouseLeave}
         >
           {fnCall}
           <Handle
             type="source"
             position={Position.Right}
-            id={`${fnName}-${localIndex}`}
+            id={`${fnName}-${methodIndex}-${localIndex}`}
             data-fn-name={fnName}
-            data-handle-id={`${fnName}-${localIndex}`}
+            data-handle-id={`${fnName}-${methodIndex}-${localIndex}`}
             className="inline-fn-handle"
             style={{
               width: 8,
@@ -295,7 +297,7 @@ function CustomNode(props: CustomNodeProps) {
               zIndex: 10
             }}
             isConnectable={false}
-            onMouseEnter={() => handleMouseEnter(`${fnName}-${localIndex}`)}
+            onMouseEnter={() => handleMouseEnter(`${fnName}-${methodIndex}-${localIndex}`)}
             onMouseLeave={handleMouseLeave}
           />
         </span>
