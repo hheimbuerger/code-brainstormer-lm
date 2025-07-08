@@ -24,14 +24,14 @@ const edgeTypes: EdgeTypes = {};
 
 export default function FlowDiagram() {
   const codeMethods = useCodebaseStore((s) => s.codeMethods);
-
+  const initialPositions = [{x: 250, y: 100}, {x: 500, y: 50}, {x: 500, y: 300}];
 
   // map codeMethods -> initial nodes
   const initialNodes = useMemo(() =>
     codeMethods.map((m, i) => ({
       id: `method-${i}`,
       type: 'custom',
-      position: { x: 250 * i, y: 100 },
+      position: i < initialPositions.length ? initialPositions[i] : {x: 250 * i, y: 100},
       data: {
         methodIndex: i,
 
