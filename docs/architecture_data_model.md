@@ -8,7 +8,7 @@
 ## 2. Domain Layer (Zustand)
 ```
 CodeAspect – atomic piece of info (descriptor, state, code)
-CodeMethod  – business object composed of 4 CodeAspects
+CodeMethod  – business object composed of 4 CodeAspects: identifier, signature, specification, implementation
 CodeClass   – single CodeAspect holding the class headline
 CodebaseState – root store exposing:
   • codeClass / codeMethods / externalClasses
@@ -31,8 +31,8 @@ Behaviour:
 * **Edges are generated dynamically** by scanning each method’s `implementation.descriptor` for inline function-call strings (e.g. `formatText(...)`). For every detected call an edge is created from the calling node to the target node whose identifier starts with the function name. Handles (`sourceHandle`) are suffixed with a stable counter (`{fnName}-{idx}`) to support multiple calls.
 
 ## 4. Data-Flow Lifecycle
-1. **Initial load** – FlowDiagram reads `codeMethods` from the store and builds local `nodes` + `edges`.
-2. **User editing** (inside `CustomNode`)
+1. **Initial load** – ClassDiagram reads `codeMethods` from the store and builds local `nodes` + `edges`.
+2. **User editing** (inside `MethodNode`)
    1. User edits any `EditableField`.
    2. On *save* (Enter/blur) `handleFieldChange` calls `updateCodeMethod(idx, patch)`.
    3. Zustand mutates the requested `CodeField` → React triggers re-render of that specific node via hook subscription.

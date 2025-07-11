@@ -14,12 +14,12 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
-import CustomNode from './CustomNode';
+import MethodNode from './MethodNode';
 import { useCodebaseStore } from '../../store/useCodebaseStore';
 
 // Define nodeTypes and edgeTypes outside the component for stability
 const nodeTypes: NodeTypes = {
-  custom: CustomNode,
+  method: MethodNode,
 };
 
 const edgeTypes: EdgeTypes = {};
@@ -84,7 +84,7 @@ function buildEdges(nodes: Node[], codeMethods: any[]): Edge[] {
   return result;
 }
 
-export default function FlowDiagram() {
+export default function ClassDiagram() {
   const codeMethods = useCodebaseStore((s) => s.codeMethods);
   const initialPositions = [{x: 250, y: 100}, {x: 500, y: 50}, {x: 500, y: 300}];
 
@@ -92,7 +92,7 @@ export default function FlowDiagram() {
   const initialNodes = useMemo(() =>
     codeMethods.map((m, i) => ({
       id: `method-${i}`,
-      type: 'custom',
+      type: 'method',
       position: i < initialPositions.length ? initialPositions[i] : {x: 250 * i, y: 100},
       data: {
         methodIndex: i,

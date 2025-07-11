@@ -1,4 +1,4 @@
-.custom-node {
+.method-node {
   overflow: visible;
   background: white;
   border: 1px solid #555;
@@ -19,7 +19,7 @@
   user-select: none;
 }
 
-.custom-node__header {
+.method-node__header {
   padding: 10px;
   background-color: #f0f0f0;
   border-bottom: 1px solid #ccc;
@@ -29,24 +29,24 @@
   user-select: none;
 }
 
-.custom-node__header:active {
+.method-node__header:active {
   cursor: grabbing;
 }
 
 /* Ensure the drag handle takes full width of the header */
-.custom-node-drag-handle {
+.method-node-drag-handle {
   width: 100%;
   height: 100%;
 }
 
-.custom-node__headline {
+.method-node__identifier {
   font-size: 1em;
   font-weight: bold;
   color: #333;
   pointer-events: none; /* Make sure text selection still works */
 }
 
-.custom-node__return-value {
+.method-node__signature {
   text-align: center;
   font-size: 0.8em;
   color: #555;
@@ -55,7 +55,7 @@
   background-color: white;
 }
 
-.custom-node__content {
+.method-node__specification, .method-node__implementation {
   font-size: 0.75em;
   color: #444;
   padding: 8px 10px;
@@ -66,7 +66,7 @@
 }
 
 /* Remove border from the last content item */
-.custom-node__content:last-child {
+.method-node__specification:last-child, .method-node__implementation:last-child {
   border-bottom: none;
 }
 
@@ -156,11 +156,11 @@
   filter: drop-shadow(0 0 2px rgba(0, 102, 204, 0.5));
 }
 
-.custom-node {
+.method-node {
   overflow: visible !important;
 }
 
-.custom-node > * {
+.method-node > * {
   user-select: text;
 }
 

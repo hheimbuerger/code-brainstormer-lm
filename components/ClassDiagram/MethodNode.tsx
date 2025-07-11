@@ -8,7 +8,7 @@ import type { NodeProps } from 'reactflow';
 import { useCodebaseStore } from '../../store/useCodebaseStore';
 import { CodeAspect, AspectState } from '../../store/codebase.types';
 import type { CodeMethod } from '../../store/codebase.types';
-import './CustomNode.css';
+import './MethodNode.css';
 
 // helper to map AspectState -> emoji icon
 const getIconForState = (s?: AspectState) => {
@@ -149,14 +149,14 @@ const EditableField = ({
 // CustomNodeData is now imported from useNodesStore.ts
 
 // Custom node data type that matches what we store in React Flow nodes
-type CustomNodeData = {
+type MethodNodeData = {
   id: string;
   methodIndex: number;
 };
 
-type CustomNodeProps = NodeProps<CustomNodeData>;
+type MethodNodeProps = NodeProps<MethodNodeData>;
 
-function CustomNode(props: CustomNodeProps) {
+function MethodNode(props: MethodNodeProps) {
   const { data, selected, id: nodeId } = props;
   const updateNodeInternals = useUpdateNodeInternals();
   const methodIndex = data.methodIndex;
@@ -313,14 +313,14 @@ function CustomNode(props: CustomNodeProps) {
 
   const handleNodeClick = (e: React.MouseEvent) => {
     // Prevent node selection when clicking on non-header areas
-    if (!(e.target as HTMLElement).closest('.custom-node__header')) {
+    if (!(e.target as HTMLElement).closest('.method-node__header')) {
       e.stopPropagation();
     }
   };
 
   return (
     <div
-      className={`custom-node ${selected ? 'selected' : ''}`}
+      className={`method-node ${selected ? 'selected' : ''}`}
       onClick={handleNodeClick}
     >
       {/* invisible target handles on all four sides for automatic routing */}
@@ -329,12 +329,12 @@ function CustomNode(props: CustomNodeProps) {
       <Handle type="target" position={Position.Bottom} id="b" style={{ opacity: 0 }} isConnectable={false} />
       <Handle type="target" position={Position.Left} id="l" style={{ opacity: 0 }} isConnectable={false} />
 
-      <div className="custom-node__header custom-node-drag-handle" style={{position:'relative'}}>
+      <div className="method-node__header method-node-drag-handle" style={{position:'relative'}}>
         <EditableField
           value={method?.identifier?.descriptor || ''}
           onSave={(value) => handleAspectChange('identifier', value)}
           placeholder="Enter method name"
-          className="custom-node__headline"
+          className="method-node__identifier"
           isBold
           nodeId={nodeId}
           fieldName="identifier"
@@ -342,7 +342,7 @@ function CustomNode(props: CustomNodeProps) {
         <span className="field-state-icon" style={{position:'absolute',top:2,right:4,cursor:'pointer'}} onClick={(e)=>{e.stopPropagation(); toggleAspectState('identifier');}}>{getIconForState(method?.identifier?.state)}</span>
       </div>
 
-      <div className="custom-node__return-value" style={{position:'relative'}}>
+      <div className="method-node__signature" style={{position:'relative'}}>
         <EditableField
           value={method?.signature?.descriptor || ''}
           onSave={(value) => handleAspectChange('signature', value)}
@@ -354,7 +354,7 @@ function CustomNode(props: CustomNodeProps) {
         <span className="field-state-icon" style={{position:'absolute',top:2,right:4,cursor:'pointer'}} onClick={(e)=>{e.stopPropagation(); toggleAspectState('signature');}}>{getIconForState(method?.signature?.state)}</span>
       </div>
 
-      <div className="custom-node__content" style={{position:'relative'}}>
+      <div className="method-node__specification" style={{position:'relative'}}>
         <EditableField
           value={method?.specification?.descriptor || ''}
           onSave={(value) => handleAspectChange('specification', value)}
@@ -365,7 +365,7 @@ function CustomNode(props: CustomNodeProps) {
         <span className="field-state-icon" style={{position:'absolute',top:2,right:4,cursor:'pointer'}} onClick={(e)=>{e.stopPropagation(); toggleAspectState('specification');}}>{getIconForState(method?.specification?.state)}</span>
       </div>
 
-      <div className="custom-node__content implementation-field" style={{position:'relative', whiteSpace:'pre-wrap'}}>
+      <div className="method-node__implementation" style={{position:'relative', whiteSpace:'pre-wrap'}}>
         {renderImplementation(method?.implementation?.descriptor || '')}
         <span className="field-state-icon" style={{position:'absolute',top:2,right:4,cursor:'pointer'}} onClick={(e)=>{e.stopPropagation(); toggleAspectState('implementation');}}>{getIconForState(method?.implementation?.state)}</span>
       </div>
@@ -375,4 +375,4 @@ function CustomNode(props: CustomNodeProps) {
   );
 }
 
-export default memo(CustomNode);
+export default memo(MethodNode);
