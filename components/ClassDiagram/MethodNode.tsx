@@ -1,12 +1,16 @@
 'use client';
 
 import { memo, useState, useRef, useEffect, JSX, useCallback } from 'react';
-import axios from 'axios';
+
 import { useMutation } from '@tanstack/react-query';
 import { Handle, Position, useUpdateNodeInternals } from 'reactflow';
 import type { NodeProps } from 'reactflow';
 import { useCodebaseStore } from '@/store/useCodebaseStore';
-import { CodeAspect, AspectState } from '@/store/codebase.types';
+import { CodeAspect, AspectState, CodeAspectType } from '@/store/codebase.types';
+import { applyCodegenCommands } from '@/features/codegen/codegenApply';
+import { invokeCodeGen } from '@/app/actions/codegen';
+import { packageCodebaseState } from '@/features/codegen/codegenPackaging';
+import { CodegenTrigger } from '@/features/codegen/codegenBackend';
 import type { CodeMethod } from '@/store/codebase.types';
 import './MethodNode.css';
 
@@ -58,22 +62,44 @@ const EditableField = ({
     }
   }, [isEditing]);
 
-  // React Query mutation for log-edit
-  const logEditMutation = useMutation({
+  // React Query mutation for codegen
+  const codegenMutation = useMutation({
     mutationFn: async ({ nodeId, field, oldValue, newValue }: { nodeId: string; field: string; oldValue: string; newValue: string }) => {
-      return axios.post('/api/log-edit', {
-        nodeId,
-        field,
-        oldValue,
-        newValue,
-      });
+      console.log(`[DEBUG] Codegen invoked for method ${nodeId}, field ${field}`);
+      const codebaseState = useCodebaseStore.getState();
+
+      // Marshall the codebase state on the client
+      const packagedState = packageCodebaseState(codebaseState);
+      console.log('[DEBUG] Codebase state has been packaged.');
+
+      // The nodeId from React Flow is the method's index in the store.
+      const methodIndex = parseInt(nodeId, 10);
+      const triggeredMethod = packagedState.methods[methodIndex];
+
+      if (!triggeredMethod) {
+        console.warn('Could not find triggered method for codegen');
+        return [];
+      }
+
+      // Create the trigger object on the client
+      const trigger: CodegenTrigger = {
+        method: triggeredMethod,
+        aspect: field as CodeAspectType,
+      };
+
+      // This now calls the server action with the packaged state and trigger
+      return invokeCodeGen(packagedState, trigger);
+    },
+    onSuccess: (commands) => {
+      // apply the commands to the store
+      applyCodegenCommands(commands);
     },
   });
 
   const handleSave = () => {
     if (inputValue.trim() !== '' || value === '') {
       if (inputValue !== value && nodeId && fieldName) {
-        logEditMutation.mutate({
+        codegenMutation.mutate({
           nodeId,
           field: fieldName,
           oldValue: value,
@@ -115,13 +141,13 @@ const EditableField = ({
             fontWeight: isBold ? 'bold' : 'normal',
           }}
         />
-        {logEditMutation.isPending && (
+        {codegenMutation.isPending && (
           <span className="editable-field__status" style={{ position: 'absolute', right: 4, top: 4, fontSize: 10, color: '#888' }}>Saving...</span>
         )}
-        {logEditMutation.isError && (
+        {codegenMutation.isError && (
           <span className="editable-field__status" style={{ position: 'absolute', right: 4, top: 4, fontSize: 10, color: 'red' }}>Error</span>
         )}
-        {logEditMutation.isSuccess && (
+        {codegenMutation.isSuccess && (
           <span className="editable-field__status" style={{ position: 'absolute', right: 4, top: 4, fontSize: 10, color: 'green' }}>Saved</span>
         )}
       </div>
@@ -168,10 +194,10 @@ function MethodNode(props: MethodNodeProps) {
   // toggle between LOCKED and AUTOGEN for a field
   const toggleAspectState = (aspectKey: 'identifier' | 'signature' | 'specification' | 'implementation') => {
     if (methodIndex === undefined || !method) return;
-    const aspect = method[aspectKey];
-    const newState = aspect.state === AspectState.LOCKED ? AspectState.AUTOGEN : AspectState.LOCKED;
-    const updatedAspect = new CodeAspect(aspect.descriptor, newState, aspect.code);
-    updateCodeMethod(methodIndex, { [aspectKey]: updatedAspect } as Partial<CodeMethod>);
+    const currentAspect = method[aspectKey];
+    const newAspectState = currentAspect.state === AspectState.LOCKED ? AspectState.AUTOGEN : AspectState.LOCKED;
+    const newAspect = new CodeAspect(currentAspect.descriptor, newAspectState);
+    updateCodeMethod(methodIndex, { [aspectKey]: newAspect } as Partial<CodeMethod>);
   };
 
   const handleAspectChange = (aspect: 'identifier' | 'signature' | 'specification' | 'implementation', value: string) => {
@@ -182,7 +208,7 @@ function MethodNode(props: MethodNodeProps) {
 
     // Helper function to create a new CodeAspect with updated descriptor and set state to EDITED
     const createUpdatedAspect = (aspect: CodeAspect, descriptor: string, newState: AspectState = AspectState.EDITED): CodeAspect => {
-      return new CodeAspect(descriptor, newState, aspect.code);
+      return new CodeAspect(descriptor, newState);
     };
 
     switch (aspect) {

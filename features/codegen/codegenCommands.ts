@@ -13,6 +13,7 @@ export enum CommandType {
   CREATE_METHOD = 'create_method',
   DELETE_METHOD = 'delete_method',
   UPDATE_ASPECT = 'update_aspect',
+  UPDATE_METHOD_CODE = 'update_method_code',
 }
 
 /* ------------------------------------------------------------------
@@ -44,10 +45,18 @@ export interface UpdateAspectCommand extends BaseCommand {
   value: string;
 }
 
+export interface UpdateMethodCodeCommand extends BaseCommand {
+  type: CommandType.UPDATE_METHOD_CODE;
+  className: string;
+  methodName: string;
+  value: string;
+}
+
 /**
  * Union of all command payloads
  */
 export type CodeGenCommand =
   | CreateMethodCommand
   | DeleteMethodCommand
-  | UpdateAspectCommand;
+  | UpdateAspectCommand
+  | UpdateMethodCodeCommand;

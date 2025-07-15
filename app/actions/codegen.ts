@@ -14,10 +14,10 @@ import { CodeGenCommand } from '@/features/codegen/codegenCommands';
  * server-side module graph (via the `use server` pragma) it never ships to the
  * browser.  The client calls it over an automatic POST request handled by Next.
  */
-export async function generateCode(
+export async function invokeCodeGen(
   snapshot: PackagedCodebase,
   trigger: CodegenTrigger
 ): Promise<CodeGenCommand[]> {
-  // Delegates to the mock backend for now.
+  console.log('[DEBUG] Invoking codegen backend with trigger:', trigger);
   return callLLMCodeSynthesis(snapshot, trigger);
 }

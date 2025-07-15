@@ -16,9 +16,10 @@ This document captures the **concept**, **principles**, and **call-flow** of the
 
 1. **User action** – e.g. *Generate Code* button click.  
 2. **`packageCodebaseState`** (client) serialises the Zustand store → `PackagedCodebase`.  
-3. **`generateCode` server action** is invoked with the snapshot.  *Runs on server only.*  
-4. **Server action** delegates to **`simulateCodeGeneration`** (mocked backend) which returns a list of commands (`CodeGenCommand[]`).  
-5. **`applyCodegenCommands`** (client) walks the array and mutates the store via its public mutators.  React-Flow re-renders automatically.  
+3. **The client creates a `CodegenTrigger`** object describing the user's action (e.g. which method and aspect were edited).
+4. **`invokeCodeGen` server action** is invoked with the `PackagedCodebase` and `CodegenTrigger`. *This runs on the server only.*
+5. **Server action** delegates to **`callLLMCodeSynthesis`** (the mocked backend) which returns a list of commands (`CodeGenCommand[]`).
+6. **`applyCodegenCommands`** (client) walks the returned array and mutates the store via its public mutators. React-Flow re-renders automatically.
 6. **Shadow code** will later be regenerated from the updated store (out of scope for this phase).
 
 A sequence diagram-style outline:
@@ -30,7 +31,7 @@ UI (client)
 packageCodebaseState
   │ snapshot
   ▼             (network / server action)
-generateCode  –––––––––––––––––▶  simulateCodeGeneration (server)
+invokeCodeGen  –––––––––––––––––▶  callLLMCodeSynthesis (server)
   │ ◀–––––––––––––––––– commands
   ▼
 applyCodegenCommands
@@ -44,7 +45,7 @@ React-Flow & UI update
 | Responsibility | File | Public API | When Called | Runs On |
 |----------------|------|-----------|-------------|---------|
 | Snapshot current model | `features/codegen/codegenPackaging.ts` | `packageCodebaseState(state)` | Immediately before talking to the server | Client |
-| Invoke backend | `app/actions/codegen.ts` | `generateCode(snapshot)` | Called by client; executes on server (server action) | Server |
+| Invoke backend | `app/actions/codegen.ts` | `invokeCodeGen(snapshot, trigger)` | Called by client; executes on server (server action) | Server |
 | Mocked backend | `features/codegen/codegenBackend.ts` | `callLLMCodeSynthesis(snapshot)` | Only inside server action (temp) | Server |
 | Command schema | `features/codegen/codegenCommands.ts` | `CommandType`, `CodeGenCommand`, etc. | Shared by all layers | Both |
 | Apply commands | `features/codegen/codegenApply.ts` | `applyCodegenCommands(cmds)` | After server action returns | Client |
@@ -72,8 +73,23 @@ Further mutators will be added as the command set grows (e.g. class renaming, ex
 
 ## 6. Current Limitations / TODOs
 
-* **Mock backend** – `simulateCodeGeneration` returns hard-coded examples. Replace with a real LLM call.  
-* **applyCodegenCommands logic** – Only scaffolding exists; mapping commands → store mutations still required.  
+### Architectural Notes & Learnings
+
+- **Server Actions vs. API Routes**: For internal client-server communication within a Next.js application, Server Actions are the preferred, more modern, and cleaner approach. They avoid the need for manual `fetch` or `axios` calls and boilerplate API route handlers. API Routes are better suited for public-facing endpoints intended for third-party consumption.
+
+- **Client-Side Marshalling**: Because the backend is stateless, the client is responsible for preparing all necessary data before calling the server. The `packageCodebaseState` function serves this purpose, creating a clean, serializable representation of the state. This is more performant than sending the entire raw store object over the network.
+
+- **Client-Side Trigger Creation**: The client has the most immediate context about a user's action (e.g., which UI element was edited). Therefore, it is the client's responsibility to construct the `CodegenTrigger` object. This keeps the server action's signature clean and its logic focused on orchestration rather than data transformation.
+
+- **Separation of Concerns**: The final architecture maintains a clean separation of responsibilities:
+  - **Client Component (`MethodNode.tsx`)**: Handles UI, captures edits, packages state, creates the trigger, calls the server action, and applies the results.
+  - **Server Action (`app/actions/codegen.ts`)**: Acts as a thin network layer, receiving pre-packaged data and passing it to the core backend logic.
+  - **Core Backend (`features/codegen/codegenBackend.ts`)**: Contains the pure `callLLMCodeSynthesis` logic, completely decoupled from the client or network.
+  - **Client Unmarshalling (`features/codegen/codegenApply.ts`)**: Logic for applying commands is kept on the client as it is tightly coupled to the client's state management library (Zustand).
+
+### Current Limitations / TODOs
+
+* **Mock backend** – `callLLMCodeSynthesis` returns hard-coded examples. Replace with a real LLM call.  
 * **Snapshot richness** – `packageCodebaseState` may need to include edges, aspect states, etc.  
 * **Shadow-code emission** – After store mutations, regenerate TypeScript files (future work).
 

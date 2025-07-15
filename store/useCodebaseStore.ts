@@ -13,12 +13,11 @@ import {
 
 
 
-// Helper function to create a new CodeField from partial data
-const createCodeField = (field: Partial<CodeAspectData> = {}): CodeAspect => {
+// Helper function to create a new CodeAspect from partial data
+const createCodeAspect = (field: Partial<CodeAspectData> = {}): CodeAspect => {
   return new CodeAspect(
     field.descriptor ?? '',
-    field.state ?? AspectState.UNSET,
-    field.code ?? ''
+    field.state ?? AspectState.UNSET
   );
 };
 
@@ -26,11 +25,11 @@ const createCodeField = (field: Partial<CodeAspectData> = {}): CodeAspect => {
 export const createCodeMethod = (method: Partial<CodeMethodData> = {}): CodeMethod => {
   
   return new CodeMethod(
-    createCodeField(method.identifier || {}),
-    createCodeField(method.signature || {}),
-
-    createCodeField(method.specification || {}),
-    createCodeField(method.implementation || {})
+    createCodeAspect(method.identifier || {}),
+    createCodeAspect(method.signature || {}),
+    createCodeAspect(method.specification || {}),
+    createCodeAspect(method.implementation || {}),
+    method.code ?? ''
   );
 };
 
@@ -48,7 +47,7 @@ export const useCodebaseStore = create<CodebaseState>()(
 
       // Update the class fields
       updateCodeClass: (field: Partial<CodeAspect>) => {
-        const updatedClass = createCodeField({
+        const updatedClass = createCodeAspect({
           ...exampleCodeClass,
           ...field
         });
@@ -77,7 +76,7 @@ export const useCodebaseStore = create<CodebaseState>()(
             signature: { ...existingMethod.signature, ...method.signature },
             specification: { ...existingMethod.specification, ...method.specification },
             implementation: { ...existingMethod.implementation, ...method.implementation },
-            
+            code: method.code ?? existingMethod.code,
           });
           
           const codeMethods = [...state.codeMethods];

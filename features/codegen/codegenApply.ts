@@ -1,4 +1,4 @@
-import { CodeGenCommand, CommandType } from './codegenCommands';
+import { CodeGenCommand, CommandType, UpdateMethodCodeCommand } from './codegenCommands';
 import { useCodebaseStore, createCodeMethod } from '@/store/useCodebaseStore';
 import { AspectState } from '@/store/codebase.types';
 
@@ -7,6 +7,7 @@ import { AspectState } from '@/store/codebase.types';
  * applies them sequentially to the Zustand store.
  */
 export function applyCodegenCommands(cmds: CodeGenCommand[]) {
+  console.log(`[DEBUG] Applying ${cmds.length} commands to the store.`);
   // It's crucial to get a fresh state reference inside the loop for every command,
   // as each command mutates the store and the next command needs to see that change.
   cmds.forEach((cmd) => {
@@ -31,9 +32,9 @@ export function applyCodegenCommands(cmds: CodeGenCommand[]) {
           console.warn('Could not find method to update:', cmd.methodName);
           break;
         }
-        // Set the aspect's code and mark its state as AI-generated.
+        // Set the aspect's descriptor and mark its state as AI-generated.
         store.updateCodeMethod(methodIndex, {
-          [cmd.aspect]: { code: cmd.value, state: AspectState.AUTOGEN },
+          [cmd.aspect]: { descriptor: cmd.value, state: AspectState.AUTOGEN },
         });
         break;
       }
@@ -47,6 +48,18 @@ export function applyCodegenCommands(cmds: CodeGenCommand[]) {
           break;
         }
         store.removeCodeMethod(methodIndex);
+        break;
+      }
+
+      case CommandType.UPDATE_METHOD_CODE: {
+        const methodIndex = store.codeMethods.findIndex(
+          (m) => m.identifier.descriptor === cmd.methodName
+        );
+        if (methodIndex === -1) {
+          console.warn('Could not find method to update code for:', cmd.methodName);
+          break;
+        }
+        store.updateCodeMethod(methodIndex, { code: cmd.value });
         break;
       }
 

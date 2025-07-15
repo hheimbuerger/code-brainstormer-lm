@@ -11,6 +11,8 @@ const ASPECT_PROGRESSION = [
 ];
 
 // Hard-coded placeholder text for generated aspects.
+const PLACEHOLDER_CODE = 'def newMethod(expression):\n  # TODO: implement\n  return 0';
+
 const PLACEHOLDERS: Record<CodeAspectType, string> = {
   [CodeAspectType.IDENTIFIER]: 'newMethod',
   [CodeAspectType.SIGNATURE]:
@@ -42,6 +44,7 @@ export async function callLLMCodeSynthesis(
   snapshot: PackagedCodebase,
   trigger: CodegenTrigger
 ): Promise<CodeGenCommand[]> {
+  console.log('[DEBUG] Entered callLLMCodeSynthesis.');
   const { method: triggeredMethod, aspect: triggeredAspect } = trigger;
 
   // 1. Find the next aspect in the progression.
@@ -53,7 +56,7 @@ export async function callLLMCodeSynthesis(
 
   // 2. Find the full, updated method data from the snapshot.
   const methodInSnapshot = snapshot.methods.find(
-    (m) => m.identifier.code === triggeredMethod.identifier.code
+    (m) => m.identifier.descriptor === triggeredMethod.identifier.descriptor
   );
   if (!methodInSnapshot) {
     return []; // Should not happen.
@@ -65,14 +68,28 @@ export async function callLLMCodeSynthesis(
     return []; // Target is locked, do nothing.
   }
 
-  // 4. If not locked, generate a command to update it with a placeholder.
-  return [
+  // 4. If not locked, generate commands to update it with a placeholder.
+  const commands: CodeGenCommand[] = [
     {
       type: CommandType.UPDATE_ASPECT,
       className: snapshot.codeClass.descriptor,
-      methodName: methodInSnapshot.identifier.code,
+      methodName: methodInSnapshot.identifier.descriptor,
       aspect: nextAspect,
       value: PLACEHOLDERS[nextAspect],
     },
   ];
+
+  // 5. If we've just generated the implementation descriptor, also generate the code.
+  if (nextAspect === CodeAspectType.IMPLEMENTATION) {
+    commands.push({
+      type: CommandType.UPDATE_METHOD_CODE,
+      className: snapshot.codeClass.descriptor,
+      methodName: methodInSnapshot.identifier.descriptor,
+      value: PLACEHOLDER_CODE,
+    });
+  }
+
+  console.log(`[DEBUG] Exiting callLLMCodeSynthesis, returning ${commands.length} commands.`);
+  return commands;
 }
+

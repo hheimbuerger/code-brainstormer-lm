@@ -17,14 +17,12 @@ export enum AspectState {
 export interface CodeAspectData {
   descriptor: string;
   state: AspectState;
-  code: string;
 }
 
 export class CodeAspect implements CodeAspectData {
   constructor(
     public descriptor: string = '',
-    public state: AspectState = AspectState.UNSET,
-    public code: string = ''
+    public state: AspectState = AspectState.UNSET
   ) {}
 
   // For better string representation in logs and Redux DevTools
@@ -37,7 +35,6 @@ export class CodeAspect implements CodeAspectData {
     return {
       descriptor: this.descriptor,
       state: this.state,
-      code: this.code,
       _summary: this.toString()
     };
   }
@@ -48,6 +45,7 @@ export interface CodeMethodData {
   signature: Partial<CodeAspectData>;
   specification: Partial<CodeAspectData>;
   implementation: Partial<CodeAspectData>;
+  code: string;
 }
 
 export class CodeMethod {
@@ -57,6 +55,7 @@ export class CodeMethod {
     public signature: CodeAspect = new CodeAspect(),
     public specification: CodeAspect = new CodeAspect(),
     public implementation: CodeAspect = new CodeAspect(),
+    public code: string = '',
   ) {
     
   }
@@ -73,7 +72,7 @@ export class CodeMethod {
       signature: this.signature,
       specification: this.specification,
       implementation: this.implementation,
-      
+      code: this.code,
       _summary: this.toString()
     };
   }

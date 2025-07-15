@@ -10,7 +10,7 @@ import {
  * Keep this as lean as possible so the prompt stays within token limits.
  */
 export interface PackagedAspect {
-  code: string;
+  descriptor: string;
   state: AspectState;
 }
 
@@ -19,10 +19,11 @@ export interface PackagedCodeMethod {
   signature: PackagedAspect;
   specification: PackagedAspect;
   implementation: PackagedAspect;
+  code: string;
 }
 
 export interface PackagedCodebase {
-  codeClass: CodeAspect;
+  codeClass: PackagedAspect;
   methods: PackagedCodeMethod[];
   externalClasses: string[];
 }
@@ -35,12 +36,13 @@ export interface PackagedCodebase {
  */
 export function packageCodebaseState(state: CodebaseState): PackagedCodebase {
   return {
-    codeClass: state.codeClass,
+    codeClass: { descriptor: state.codeClass.descriptor, state: state.codeClass.state },
     methods: state.codeMethods.map((m: CodeMethod) => ({
-      identifier: { descriptor: m.identifier.descriptor, code: m.identifier.code, state: m.identifier.state },
-      signature: { descriptor: m.signature.descriptor, code: m.signature.code, state: m.signature.state },
-      specification: { descriptor: m.specification.descriptor, code: m.specification.code, state: m.specification.state },
-      implementation: { descriptor: m.implementation.descriptor, code: m.implementation.code, state: m.implementation.state },
+      identifier: { descriptor: m.identifier.descriptor, state: m.identifier.state },
+      signature: { descriptor: m.signature.descriptor, state: m.signature.state },
+      specification: { descriptor: m.specification.descriptor, state: m.specification.state },
+      implementation: { descriptor: m.implementation.descriptor, state: m.implementation.state },
+      code: m.code,
     })),
     externalClasses: [...state.externalClasses],
   };
