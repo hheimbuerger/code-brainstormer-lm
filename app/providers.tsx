@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React, { useState } from "react";
-import { useCodebaseStore } from "../store/useCodebaseStore";
+import { useCodebaseStore } from "@/store/useCodebaseStore";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   // Ensure a single QueryClient instance per app session
@@ -10,7 +10,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   
   // Initialize the store
   const storeState = useCodebaseStore.getState();
-  console.log('Store initialized with state:', {
+  /* console.log('Store initialized with state:', {
     codeClass: storeState.codeClass,
     codeMethods: storeState.codeMethods.map(m => ({
       ...m,
@@ -18,7 +18,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       identifier: m.identifier.descriptor,
       signature: m.signature.descriptor
     }))
-  });
+  }); */
   
   return (
     <QueryClientProvider client={queryClient}>

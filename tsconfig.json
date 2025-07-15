@@ -18,6 +18,10 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"]
+    },
     "plugins": [
       {
         "name": "next"
@@ -29,6 +33,7 @@
     "**/*.tsx",
     "app",
     "components",
+    "features",
     "next-env.d.ts",
     ".next/types/**/*.ts"
   ],

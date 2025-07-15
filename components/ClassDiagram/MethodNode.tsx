@@ -5,9 +5,9 @@ import axios from 'axios';
 import { useMutation } from '@tanstack/react-query';
 import { Handle, Position, useUpdateNodeInternals } from 'reactflow';
 import type { NodeProps } from 'reactflow';
-import { useCodebaseStore } from '../../store/useCodebaseStore';
-import { CodeAspect, AspectState } from '../../store/codebase.types';
-import type { CodeMethod } from '../../store/codebase.types';
+import { useCodebaseStore } from '@/store/useCodebaseStore';
+import { CodeAspect, AspectState } from '@/store/codebase.types';
+import type { CodeMethod } from '@/store/codebase.types';
 import './MethodNode.css';
 
 // helper to map AspectState -> emoji icon

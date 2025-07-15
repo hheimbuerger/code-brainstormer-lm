@@ -75,8 +75,6 @@ export const useCodebaseStore = create<CodebaseState>()(
           const updatedMethod = createCodeMethod({
             identifier: { ...existingMethod.identifier, ...method.identifier },
             signature: { ...existingMethod.signature, ...method.signature },
-            
-            
             specification: { ...existingMethod.specification, ...method.specification },
             implementation: { ...existingMethod.implementation, ...method.implementation },
             
