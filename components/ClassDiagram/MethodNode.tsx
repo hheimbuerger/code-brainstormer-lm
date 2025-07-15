@@ -48,7 +48,12 @@ const EditableField = ({
   isBold = false,
   nodeId,
   fieldName,
-}: EditableFieldProps & { nodeId?: string; fieldName?: string }) => {
+  methodIndex,
+}: EditableFieldProps & {
+  nodeId?: string;
+  fieldName?: string;
+  methodIndex?: number;
+}) => {
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState(value);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -64,16 +69,26 @@ const EditableField = ({
 
   // React Query mutation for codegen
   const codegenMutation = useMutation({
-    mutationFn: async ({ nodeId, field, oldValue, newValue }: { nodeId: string; field: string; oldValue: string; newValue: string }) => {
-      console.log(`[DEBUG] Codegen invoked for method ${nodeId}, field ${field}`);
+    mutationFn: async ({
+      methodIndex,
+      field,
+      oldValue,
+      newValue,
+    }: {
+      methodIndex: number;
+      field: string;
+      oldValue: string;
+      newValue: string;
+    }) => {
+      console.log(
+        `[DEBUG] Codegen invoked for method index ${methodIndex}, field ${field}`,
+      );
       const codebaseState = useCodebaseStore.getState();
 
       // Marshall the codebase state on the client
       const packagedState = packageCodebaseState(codebaseState);
       console.log('[DEBUG] Codebase state has been packaged.');
 
-      // The nodeId from React Flow is the method's index in the store.
-      const methodIndex = parseInt(nodeId, 10);
       const triggeredMethod = packagedState.methods[methodIndex];
 
       if (!triggeredMethod) {
@@ -98,9 +113,13 @@ const EditableField = ({
 
   const handleSave = () => {
     if (inputValue.trim() !== '' || value === '') {
-      if (inputValue !== value && nodeId && fieldName) {
+      if (
+        inputValue !== value &&
+        methodIndex !== undefined &&
+        fieldName
+      ) {
         codegenMutation.mutate({
-          nodeId,
+          methodIndex,
           field: fieldName,
           oldValue: value,
           newValue: inputValue,
@@ -183,12 +202,17 @@ type MethodNodeData = {
 type MethodNodeProps = NodeProps<MethodNodeData>;
 
 function MethodNode(props: MethodNodeProps) {
-  const { data, selected, id: nodeId } = props;
+  const { id: nodeId, data, selected } = props;
+  const { methodIndex } = data;
   const updateNodeInternals = useUpdateNodeInternals();
-  const methodIndex = data.methodIndex;
 
   // Select only the required slice so the node re-renders whenever this method changes
   const method = useCodebaseStore(state => state.codeMethods[methodIndex]);
+
+  // Force React Flow to recalculate handle positions whenever implementation text changes
+  useEffect(() => {
+    updateNodeInternals(nodeId);
+  }, [nodeId, method?.implementation?.descriptor, updateNodeInternals]);
   const updateCodeMethod = useCodebaseStore(state => state.updateCodeMethod);
 
   // toggle between LOCKED and AUTOGEN for a field
@@ -364,6 +388,7 @@ function MethodNode(props: MethodNodeProps) {
           isBold
           nodeId={nodeId}
           fieldName="identifier"
+          methodIndex={methodIndex}
         />
         <span className="field-state-icon" style={{position:'absolute',top:2,right:4,cursor:'pointer'}} onClick={(e)=>{e.stopPropagation(); toggleAspectState('identifier');}}>{getIconForState(method?.identifier?.state)}</span>
       </div>
@@ -376,6 +401,7 @@ function MethodNode(props: MethodNodeProps) {
           isItalic
           nodeId={nodeId}
           fieldName="signature"
+          methodIndex={methodIndex}
         />
         <span className="field-state-icon" style={{position:'absolute',top:2,right:4,cursor:'pointer'}} onClick={(e)=>{e.stopPropagation(); toggleAspectState('signature');}}>{getIconForState(method?.signature?.state)}</span>
       </div>
@@ -387,6 +413,7 @@ function MethodNode(props: MethodNodeProps) {
           placeholder="Enter specification"
           nodeId={nodeId}
           fieldName="specification"
+          methodIndex={methodIndex}
         />
         <span className="field-state-icon" style={{position:'absolute',top:2,right:4,cursor:'pointer'}} onClick={(e)=>{e.stopPropagation(); toggleAspectState('specification');}}>{getIconForState(method?.specification?.state)}</span>
       </div>

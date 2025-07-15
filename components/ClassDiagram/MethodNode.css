@@ -43,7 +43,13 @@
   font-size: 1em;
   font-weight: bold;
   color: #333;
-  pointer-events: none; /* Make sure text selection still works */
+  cursor: text;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.method-node__identifier:hover {
+  border-color: #ccc;
+  background-color: #f9f9f9;
 }
 
 .method-node__signature {
@@ -96,7 +102,7 @@
   border: 1px solid #ddd;
   border-radius: 4px;
   padding: 2px 15px 2px 4px; /* Right padding for handle */
-  margin-right: 8px; /* Increased margin to prevent overlap */
+  margin-right: 2px;
   font-family: monospace;
   /* Ensure the handle is positioned inside this container */
   overflow: visible;

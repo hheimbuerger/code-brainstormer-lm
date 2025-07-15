@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -104,6 +104,10 @@ export default function ClassDiagram() {
 
     const [edges, setEdges] = useState<Edge[]>(() => buildEdges(initialNodes, codeMethods));
 
+    useEffect(() => {
+      setEdges(buildEdges(nodes, codeMethods));
+    }, [nodes, codeMethods, setEdges]);
+
   return (
     <div style={{ width: '100%', height: '100%' }}>
       <ReactFlow
@@ -125,7 +129,6 @@ export default function ClassDiagram() {
         }}
         defaultEdgeOptions={{
           animated: false,
-          type: 'bezier',
         }}
       >
         <Background />
