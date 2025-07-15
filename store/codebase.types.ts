@@ -1,5 +1,12 @@
 import { type Node, type Edge, type NodeChange, type EdgeChange } from 'reactflow';
 
+export enum CodeAspectType {
+  IDENTIFIER = 'identifier',
+  SIGNATURE = 'signature',
+  SPECIFICATION = 'specification',
+  IMPLEMENTATION = 'implementation',
+}
+
 export enum AspectState {
   UNSET = 'unset',
   AUTOGEN = 'autogen',

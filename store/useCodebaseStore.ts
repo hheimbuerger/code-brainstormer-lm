@@ -23,7 +23,7 @@ const createCodeField = (field: Partial<CodeAspectData> = {}): CodeAspect => {
 };
 
 // Helper function to create a new CodeMethod from partial data
-const createCodeMethod = (method: Partial<CodeMethodData> = {}): CodeMethod => {
+export const createCodeMethod = (method: Partial<CodeMethodData> = {}): CodeMethod => {
   
   return new CodeMethod(
     createCodeField(method.identifier || {}),

@@ -1,38 +1,60 @@
 import { CodeGenCommand, CommandType } from './codegenCommands';
-import { useCodebaseStore } from '@/store/useCodebaseStore';
+import { useCodebaseStore, createCodeMethod } from '@/store/useCodebaseStore';
+import { AspectState } from '@/store/codebase.types';
 
 /**
- * applyCodegenCommands – SKETCH ONLY
- * -------------------------------------------------
- * Walks through the array of commands returned by the backend and mutates the
- * Zustand store accordingly.  All branches are placeholders – fill them in
- * when the detailed store mutation logic is clear.
+ * Walks through an array of commands from the code-generation backend and
+ * applies them sequentially to the Zustand store.
  */
 export function applyCodegenCommands(cmds: CodeGenCommand[]) {
-  const store = useCodebaseStore.getState();
-  const { updateCodeClass, updateCodeMethod, addCodeMethod, removeCodeMethod } = store;
-
+  // It's crucial to get a fresh state reference inside the loop for every command,
+  // as each command mutates the store and the next command needs to see that change.
   cmds.forEach((cmd) => {
+    const store = useCodebaseStore.getState();
+
     switch (cmd.type) {
-      case CommandType.CREATE_METHOD:
-        // TODO: Map cmd.method into store.addCodeMethod / update logic
-        addCodeMethod();
+      case CommandType.CREATE_METHOD: {
+        // First, add a new blank method.
+        store.addCodeMethod();
+        // Then, get its index and immediately update it with the payload.
+        const newIndex = store.codeMethods.length - 1;
+        const newMethod = createCodeMethod(cmd.method);
+        store.updateCodeMethod(newIndex, newMethod);
         break;
+      }
 
-      case CommandType.UPDATE_ASPECT:
-        // TODO: Locate method index by name and update aspect
-        // updateCodeMethod(index, { [cmd.aspect]: { code: cmd.value } })
+      case CommandType.UPDATE_ASPECT: {
+        const methodIndex = store.codeMethods.findIndex(
+          (m) => m.identifier.descriptor === cmd.methodName
+        );
+        if (methodIndex === -1) {
+          console.warn('Could not find method to update:', cmd.methodName);
+          break;
+        }
+        // Set the aspect's code and mark its state as AI-generated.
+        store.updateCodeMethod(methodIndex, {
+          [cmd.aspect]: { code: cmd.value, state: AspectState.AUTOGEN },
+        });
         break;
+      }
 
-      case CommandType.DELETE_METHOD:
-        // TODO: Find method index and remove
-        // removeCodeMethod(index)
+      case CommandType.DELETE_METHOD: {
+        const methodIndex = store.codeMethods.findIndex(
+          (m) => m.identifier.descriptor === cmd.methodName
+        );
+        if (methodIndex === -1) {
+          console.warn('Could not find method to delete:', cmd.methodName);
+          break;
+        }
+        store.removeCodeMethod(methodIndex);
         break;
+      }
 
-      // Add other cases as CommandType expands
-
-      default:
-        console.warn('Unhandled command', cmd);
+      default: {
+        // This ensures that we get a compile-time error if we forget to handle a command.
+        const _exhaustiveCheck: never = cmd;
+        console.warn('Unhandled command:', _exhaustiveCheck);
+      }
     }
   });
 }

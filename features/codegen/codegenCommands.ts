@@ -1,4 +1,4 @@
-import { CodeMethodData } from '@/store/codebase.types';
+import { CodeMethodData, CodeAspectType } from '@/store/codebase.types';
 
 // -----------------------------------------------------------------------------
 // Command definitions for code-generation operations currently supported.
@@ -36,13 +36,11 @@ export interface DeleteMethodCommand extends BaseCommand {
   methodName: string;
 }
 
-export type AspectName = 'identifier' | 'signature' | 'specification' | 'implementation';
-
 export interface UpdateAspectCommand extends BaseCommand {
   type: CommandType.UPDATE_ASPECT;
   className: string;
   methodName: string;
-  aspect: AspectName;
+  aspect: CodeAspectType;
   value: string;
 }
 

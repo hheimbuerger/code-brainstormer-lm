@@ -1,9 +1,9 @@
 'use server';
 
-// Server action wrapper for the LLM-powered code-generation endpoint.
-// When we replace the mock with a real backend call this file remains the only place to change.
+// This file defines the server action that serves as the main entry point for code generation.
+// It delegates to the `callLLMCodeSynthesis` function.
 
-import { callLLMCodeSynthesis } from '@/features/codegen/codegenBackend';
+import { callLLMCodeSynthesis, CodegenTrigger } from '@/features/codegen/codegenBackend';
 import { PackagedCodebase } from '@/features/codegen/codegenPackaging';
 import { CodeGenCommand } from '@/features/codegen/codegenCommands';
 
@@ -15,8 +15,9 @@ import { CodeGenCommand } from '@/features/codegen/codegenCommands';
  * browser.  The client calls it over an automatic POST request handled by Next.
  */
 export async function generateCode(
-  snapshot: PackagedCodebase
+  snapshot: PackagedCodebase,
+  trigger: CodegenTrigger
 ): Promise<CodeGenCommand[]> {
   // Delegates to the mock backend for now.
-  return callLLMCodeSynthesis(snapshot);
+  return callLLMCodeSynthesis(snapshot, trigger);
 }

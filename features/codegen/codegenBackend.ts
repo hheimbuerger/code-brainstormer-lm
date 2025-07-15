@@ -1,68 +1,78 @@
-import { PackagedCodebase } from './codegenPackaging';
+import { PackagedCodebase, PackagedCodeMethod } from './codegenPackaging';
 import { CodeGenCommand, CommandType } from './codegenCommands';
+import { AspectState, CodeAspectType } from '@/store/codebase.types';
 
-// -----------------------------------------------------------------------------
-// Hard-coded placeholder text for generated aspects. Fill in real strings later.
-// -----------------------------------------------------------------------------
-const SIGNATURE_PLACEHOLDER = '/* SIGNATURE_PLACEHOLDER */';
-const SPEC_PLACEHOLDER = '/* SPEC_PLACEHOLDER */';
-const IMPLEMENTATION_PLACEHOLDER = '/* IMPLEMENTATION_PLACEHOLDER */';
+// Defines the progression of aspects for code generation.
+const ASPECT_PROGRESSION = [
+  CodeAspectType.IDENTIFIER,
+  CodeAspectType.SIGNATURE,
+  CodeAspectType.SPECIFICATION,
+  CodeAspectType.IMPLEMENTATION,
+];
 
-// Defines the progression order of aspects when incrementally generated.
-const ASPECT_ORDER = ['signature', 'specification', 'implementation'] as const;
+// Hard-coded placeholder text for generated aspects.
+const PLACEHOLDERS: Record<CodeAspectType, string> = {
+  [CodeAspectType.IDENTIFIER]: 'newMethod',
+  [CodeAspectType.SIGNATURE]:
+    'evaluateMathematicalExpression(expression: string): int',
+  [CodeAspectType.SPECIFICATION]:
+    'Analysis the mathematical expression and return the result',
+  [CodeAspectType.IMPLEMENTATION]:
+    'Search the expression for plus and minus signs, and call add(x, y) and subtract(x, y) as necessary until the result is found',
+};
 
-type ProgressiveAspect = typeof ASPECT_ORDER[number];
-
-// Helper to decide the next aspect needing generation.
-function findNextAspect(method: any): ProgressiveAspect | null {
-  for (const aspect of ASPECT_ORDER) {
-    // We treat an aspect as unfinished if its `code` (or `descriptor`) is empty
-    // AND it is not locked. The exact structure may evolve, so we cast to any.
-    const data = (method as any)[aspect];
-    if (!data) continue;
-    const isLocked = Boolean((data as any).locked);
-    const hasContent = Boolean((data as any).code || (data as any).descriptor);
-    if (!isLocked && !hasContent) {
-      return aspect;
-    }
-  }
-  return null;
-}
-
-// Map aspect → placeholder constant.
-function placeholderFor(aspect: ProgressiveAspect): string {
-  switch (aspect) {
-    case 'signature':
-      return SIGNATURE_PLACEHOLDER;
-    case 'specification':
-      return SPEC_PLACEHOLDER;
-    case 'implementation':
-      return IMPLEMENTATION_PLACEHOLDER;
-    default:
-      return '';
-  }
-}
+/**
+ * Information about what user action triggered the code-generation call.
+ */
+export type CodegenTrigger = {
+  /** The method that was just edited. */
+  method: PackagedCodeMethod;
+  /** The specific aspect of the method that was changed. */
+  aspect: CodeAspectType;
+};
 
 /**
  * Simulates a backend call to an LLM-powered code-generation endpoint.
  *
- * For now this is fully deterministic / hard-coded: it looks at the input snapshot and
- * returns a small set of example commands. In the real implementation this would
- * make an HTTP request and parse the JSON response.
+ * This function implements the core logic for progressive code generation.
+ * Given a trigger, it determines the next logical aspect to generate and
+ * returns a command to update it, unless that aspect is locked.
  */
 export async function callLLMCodeSynthesis(
-  snapshot: PackagedCodebase
+  snapshot: PackagedCodebase,
+  trigger: CodegenTrigger
 ): Promise<CodeGenCommand[]> {
-  // 🚨 Replace with real HTTP call when backend is ready.
+  const { method: triggeredMethod, aspect: triggeredAspect } = trigger;
 
+  // 1. Find the next aspect in the progression.
+  const currentIndex = ASPECT_PROGRESSION.indexOf(triggeredAspect);
+  if (currentIndex < 0 || currentIndex + 1 >= ASPECT_PROGRESSION.length) {
+    return []; // No next aspect to generate.
+  }
+  const nextAspect = ASPECT_PROGRESSION[currentIndex + 1];
 
+  // 2. Find the full, updated method data from the snapshot.
+  const methodInSnapshot = snapshot.methods.find(
+    (m) => m.identifier.code === triggeredMethod.identifier.code
+  );
+  if (!methodInSnapshot) {
+    return []; // Should not happen.
+  }
+
+  // 3. Check if the next aspect is locked.
+  const targetAspectData = methodInSnapshot[nextAspect];
+  if (targetAspectData.state === AspectState.LOCKED) {
+    return []; // Target is locked, do nothing.
+  }
+
+  // 4. If not locked, generate a command to update it with a placeholder.
   return [
     {
       type: CommandType.UPDATE_ASPECT,
-      className: snapshot.className,
-      methodName: snapshot.methods[0].identifier,
-      aspect: 'specification',
-      value: `${snapshot.methods[0].specification} (reviewed)`
+      className: snapshot.codeClass.descriptor,
+      methodName: methodInSnapshot.identifier.code,
+      aspect: nextAspect,
+      value: PLACEHOLDERS[nextAspect],
     },
   ];
 }
