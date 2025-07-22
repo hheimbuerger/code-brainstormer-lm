@@ -102,6 +102,30 @@ export default function ClassDiagram() {
 
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
 
+  // Keep nodes array in sync with codeMethods length changes (e.g. after CREATE_METHOD)
+  useEffect(() => {
+    // Generate node definitions for all current methods
+    const updatedNodes = codeMethods.map((m, i) => {
+      const existing = nodes.find((n) => n.id === `method-${i}`);
+      if (existing) return existing; // preserve position and data
+      return {
+        id: `method-${i}`,
+        type: 'method',
+        position: { x: 250 * i, y: 100 },
+        data: { methodIndex: i },
+      } as Node;
+    });
+
+    // Include only nodes that still have a matching method
+    const trimmedNodes = nodes.filter((n) => n.id.startsWith('method-') && parseInt(n.id.split('-')[1]!) < codeMethods.length);
+
+    const nextNodes = [...trimmedNodes, ...updatedNodes.filter((n) => !trimmedNodes.some((t) => t.id === n.id))];
+
+    if (nextNodes.length !== nodes.length) {
+      setNodes(nextNodes);
+    }
+  }, [codeMethods, setNodes]);
+
     const [edges, setEdges] = useState<Edge[]>(() => buildEdges(initialNodes, codeMethods));
 
     useEffect(() => {
