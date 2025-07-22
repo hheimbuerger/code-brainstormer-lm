@@ -19,5 +19,7 @@ export async function invokeCodeGen(
   trigger: CodegenTrigger
 ): Promise<CodeGenCommand[]> {
   console.log('[DEBUG] Invoking codegen backend with trigger:', trigger);
-  return callLLMCodeSynthesis(snapshot, trigger);
+  const cmds = await callLLMCodeSynthesis(snapshot, trigger);
+  console.log('[DEBUG] invokeCodeGen returning', cmds.length, 'commands:', cmds);
+  return cmds;
 }

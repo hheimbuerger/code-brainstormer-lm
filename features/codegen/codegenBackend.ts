@@ -1,6 +1,7 @@
 import { PackagedCodebase, PackagedCodeMethod } from './codegenPackaging';
 import { CodeGenCommand, CommandType } from './codegenCommands';
 import { AspectState, CodeAspectType } from '@/store/codebase.types';
+import { cloudLlmGenerateCode } from './codegenCloudLlm';
 
 // Defines the progression of aspects for code generation.
 const ASPECT_PROGRESSION = [
@@ -46,6 +47,13 @@ export async function callLLMCodeSynthesis(
 ): Promise<CodeGenCommand[]> {
   console.log('[DEBUG] Entered callLLMCodeSynthesis.');
   const { method: triggeredMethod, aspect: triggeredAspect } = trigger;
+
+  // Call remote LLM (hard-coded test). If we get valid commands, return early
+  const cloudCmds = await cloudLlmGenerateCode(snapshot, trigger);
+  if (cloudCmds.length) {
+    console.log(`[DEBUG] Returning ${cloudCmds.length} commands from cloud test`);
+    return cloudCmds;
+  }
 
   // 1. Find the next aspect in the progression.
   const currentIndex = ASPECT_PROGRESSION.indexOf(triggeredAspect);
