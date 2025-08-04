@@ -1,7 +1,10 @@
-import { CodeGenCommand, CommandType, UpdateMethodCodeCommand } from './codegenCommands';
+import { CodeGenCommand, CommandType } from './codegenCommands';
 import { CodeAspectType, CodeMethodData } from '@/store/codebase.types';
 import { useCodebaseStore, createCodeMethod } from '@/store/useCodebaseStore';
 import { AspectState } from '@/store/codebase.types';
+import { packageCodebaseState, PackagedCodeMethod } from './codegenPackaging';
+import { invokeCodeGen } from '@/app/actions/codegen';
+import { CodegenTrigger } from './codegenBackend';
 
 /**
  * Walks through an array of commands from the code-generation backend and
@@ -114,5 +117,95 @@ export function applyCodegenCommands(initialCmds: CodeGenCommand[]) {
       }
     }
   }
+}
+
+// Defines the progression of aspects for code generation.
+const ASPECT_PROGRESSION = [
+  CodeAspectType.IDENTIFIER,
+  CodeAspectType.SIGNATURE,
+  CodeAspectType.SPECIFICATION,
+  CodeAspectType.IMPLEMENTATION,
+];
+
+/**
+ * Determines which aspects should be generated based on the edited aspect and the current state of the method.
+ * Returns the sequence of aspects from the edited one down to the first locked aspect.
+ * 
+ * @param editedAspect - The aspect that was just edited
+ * @param method - The current method state
+ * @returns Array of CodeAspectType values that should be generated
+ */
+function calculateAspectsToGenerate(
+  editedAspect: CodeAspectType,
+  method: PackagedCodeMethod
+): CodeAspectType[] {
+  const editedIndex = ASPECT_PROGRESSION.indexOf(editedAspect);
+  if (editedIndex === -1) {
+    console.warn('Unknown aspect type:', editedAspect);
+    return [];
+  }
+
+  const aspectsToGenerate: CodeAspectType[] = [];
+  
+  // Start from the aspect after the edited one
+  for (let i = editedIndex + 1; i < ASPECT_PROGRESSION.length; i++) {
+    const aspectType = ASPECT_PROGRESSION[i];
+    const aspectState = method[aspectType].state;
+    
+    // If this aspect is locked, stop here
+    if (aspectState === AspectState.LOCKED) {
+      break;
+    }
+    
+    // Add this aspect to the list to generate
+    aspectsToGenerate.push(aspectType);
+  }
+  
+  return aspectsToGenerate;
+}
+
+/**
+ * Helper function to invoke code generation for a specific method and aspect.
+ * Packages the current codebase state and creates a trigger for the backend.
+ * 
+ * @param methodIndex - Index of the method in the codebase state
+ * @param field - The aspect field being updated (e.g., 'implementation', 'specification')
+ * @returns Promise resolving to an array of CodeGenCommand objects
+ */
+export async function invokeCodegenForMethod(
+  methodIndex: number,
+  field: string
+): Promise<CodeGenCommand[]> {
+  console.log(
+    `[DEBUG] Codegen invoked for method index ${methodIndex}, field ${field}`,
+  );
+  const codebaseState = useCodebaseStore.getState();
+
+  // Marshall the codebase state on the client
+  const packagedState = packageCodebaseState(codebaseState);
+  console.log('[DEBUG] Codebase state has been packaged.');
+
+  const triggeredMethod = packagedState.functions[methodIndex];
+
+  if (!triggeredMethod) {
+    console.warn('Could not find triggered method for codegen');
+    return [];
+  }
+
+  // Calculate which aspects should be generated
+  const aspectsToGenerate = calculateAspectsToGenerate(
+    field as CodeAspectType,
+    triggeredMethod
+  );
+
+  // Create the trigger object on the client
+  const trigger: CodegenTrigger = {
+    method: triggeredMethod,
+    aspect: field as CodeAspectType,
+    aspectsToGenerate,
+  };
+
+  // This now calls the server action with the packaged state and trigger
+  return invokeCodeGen(packagedState, trigger);
 }
 

@@ -23,8 +23,8 @@ export interface PackagedCodeMethod {
 }
 
 export interface PackagedCodebase {
-  codeClass: PackagedAspect;
-  methods: PackagedCodeMethod[];
+  project: string;
+  functions: PackagedCodeMethod[];
   externalClasses: string[];
 }
 
@@ -35,9 +35,20 @@ export interface PackagedCodebase {
  * class and method details, but excludes UI-specific state like node positions.
  */
 export function packageCodebaseState(state: CodebaseState): PackagedCodebase {
+  // return {
+  //   codeClass: { descriptor: state.codeClass.descriptor, state: state.codeClass.state },
+  //   methods: state.codeMethods.map((m: CodeMethod) => ({
+  //     identifier: { descriptor: m.identifier.descriptor, state: m.identifier.state },
+  //     signature: { descriptor: m.signature.descriptor, state: m.signature.state },
+  //     specification: { descriptor: m.specification.descriptor, state: m.specification.state },
+  //     implementation: { descriptor: m.implementation.descriptor, state: m.implementation.state },
+  //     code: m.code,
+  //   })),
+  //   externalClasses: [...state.externalClasses],
+  // };
   return {
-    codeClass: { descriptor: state.codeClass.descriptor, state: state.codeClass.state },
-    methods: state.codeMethods.map((m: CodeMethod) => ({
+    project: state.codeClass.descriptor,
+    functions: state.codeMethods.map((m: CodeMethod) => ({
       identifier: { descriptor: m.identifier.descriptor, state: m.identifier.state },
       signature: { descriptor: m.signature.descriptor, state: m.signature.state },
       specification: { descriptor: m.specification.descriptor, state: m.specification.state },

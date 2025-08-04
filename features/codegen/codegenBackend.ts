@@ -3,7 +3,7 @@ import { CodeGenCommand, CommandType } from './codegenCommands';
 import { AspectState, CodeAspectType } from '@/store/codebase.types';
 import { cloudLlmGenerateCode } from './codegenCloudLlm';
 
-// Defines the progression of aspects for code generation.
+/* // Defines the progression of aspects for code generation.
 const ASPECT_PROGRESSION = [
   CodeAspectType.IDENTIFIER,
   CodeAspectType.SIGNATURE,
@@ -22,7 +22,7 @@ const PLACEHOLDERS: Record<CodeAspectType, string> = {
     'Analysis the mathematical expression and return the result',
   [CodeAspectType.IMPLEMENTATION]:
     'Search the expression for plus and minus signs, and call add(x, y) and subtract(x, y) as necessary until the result is found',
-};
+}; */
 
 /**
  * Information about what user action triggered the code-generation call.
@@ -32,6 +32,8 @@ export type CodegenTrigger = {
   method: PackagedCodeMethod;
   /** The specific aspect of the method that was changed. */
   aspect: CodeAspectType;
+  /** The sequence of aspects to generate, from the edited one down to the first locked aspect. */
+  aspectsToGenerate: CodeAspectType[];
 };
 
 /**
@@ -55,7 +57,10 @@ export async function callLLMCodeSynthesis(
     return cloudCmds;
   }
 
-  // 1. Find the next aspect in the progression.
+  throw new Error('No code-gen commands were generated from the cloud test or the sim backend.');
+
+
+/*   // 1. Find the next aspect in the progression.
   const currentIndex = ASPECT_PROGRESSION.indexOf(triggeredAspect);
   if (currentIndex < 0 || currentIndex + 1 >= ASPECT_PROGRESSION.length) {
     return []; // No next aspect to generate.
@@ -96,8 +101,7 @@ export async function callLLMCodeSynthesis(
       value: PLACEHOLDER_CODE,
     });
   }
-
   console.log(`[DEBUG] Exiting callLLMCodeSynthesis, returning ${commands.length} commands.`);
   return commands;
+ */
 }
-

@@ -21,7 +21,7 @@ The project looks at the visual diagram for a single class, how its methods inte
 
 Each method is represented as a node with four separate aspects:
 
-* descriptor: the method name
+* identifier: the method name
 * signature: the method parameters and return types
 * specification: the description of the method, use cases and internal logic, think the method's docstring
 * implementation: primarily a textual description of the method's logic, including a complete list of all method calls it can invoke.

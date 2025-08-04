@@ -6,11 +6,8 @@ import { useMutation } from '@tanstack/react-query';
 import { Handle, Position, useUpdateNodeInternals } from 'reactflow';
 import type { NodeProps } from 'reactflow';
 import { useCodebaseStore } from '@/store/useCodebaseStore';
-import { CodeAspect, AspectState, CodeAspectType } from '@/store/codebase.types';
-import { applyCodegenCommands } from '@/features/codegen/codegenApply';
-import { invokeCodeGen } from '@/app/actions/codegen';
-import { packageCodebaseState } from '@/features/codegen/codegenPackaging';
-import { CodegenTrigger } from '@/features/codegen/codegenBackend';
+import { CodeAspect, AspectState } from '@/store/codebase.types';
+import { applyCodegenCommands, invokeCodegenForMethod } from '@/features/codegen/codegenFrontend';
 import type { CodeMethod } from '@/store/codebase.types';
 import './MethodNode.css';
 
@@ -80,30 +77,7 @@ const EditableField = ({
       oldValue: string;
       newValue: string;
     }) => {
-      console.log(
-        `[DEBUG] Codegen invoked for method index ${methodIndex}, field ${field}`,
-      );
-      const codebaseState = useCodebaseStore.getState();
-
-      // Marshall the codebase state on the client
-      const packagedState = packageCodebaseState(codebaseState);
-      console.log('[DEBUG] Codebase state has been packaged.');
-
-      const triggeredMethod = packagedState.methods[methodIndex];
-
-      if (!triggeredMethod) {
-        console.warn('Could not find triggered method for codegen');
-        return [];
-      }
-
-      // Create the trigger object on the client
-      const trigger: CodegenTrigger = {
-        method: triggeredMethod,
-        aspect: field as CodeAspectType,
-      };
-
-      // This now calls the server action with the packaged state and trigger
-      return invokeCodeGen(packagedState, trigger);
+      return invokeCodegenForMethod(methodIndex, field);
     },
     onSuccess: (commands) => {
       // apply the commands to the store
