@@ -55,14 +55,38 @@ const EditableField = ({
   const [inputValue, setInputValue] = useState(value);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Sync inputValue with value prop when it changes (e.g., after backend updates)
+  useEffect(() => {
+    setInputValue(value);
+  }, [value]);
+
+  // Auto-resize textarea to fit content
+  const autoResize = useCallback(() => {
+    if (inputRef.current) {
+      // Reset height to auto to get the correct scrollHeight
+      inputRef.current.style.height = 'auto';
+      // Set height to scrollHeight to fit all content
+      inputRef.current.style.height = `${inputRef.current.scrollHeight}px`;
+    }
+  }, []);
+
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
       // Move cursor to end of text
       const length = inputRef.current.value.length;
       inputRef.current.setSelectionRange(length, length);
+      // Auto-resize when opening the field
+      autoResize();
     }
-  }, [isEditing]);
+  }, [isEditing, autoResize]);
+
+  // Auto-resize when content changes
+  useEffect(() => {
+    if (isEditing) {
+      autoResize();
+    }
+  }, [inputValue, isEditing, autoResize]);
 
   // React Query mutation for codegen
   const codegenMutation = useMutation({
@@ -132,6 +156,10 @@ const EditableField = ({
           style={{
             fontStyle: isItalic ? 'italic' : 'normal',
             fontWeight: isBold ? 'bold' : 'normal',
+            resize: 'none', // Prevent manual resizing since we're auto-resizing
+            overflow: 'hidden', // Hide scrollbars since we auto-resize
+            minHeight: '1.2em', // Ensure minimum height for single line
+            boxSizing: 'border-box', // Include padding in height calculations
           }}
         />
         {codegenMutation.isPending && (
@@ -158,6 +186,7 @@ const EditableField = ({
         fontStyle: isItalic ? 'italic' : 'normal',
         fontWeight: isBold ? 'bold' : 'normal',
         cursor: 'text',
+        whiteSpace: 'pre-wrap', // Preserve line breaks and whitespace
       }}
     >
       {value || placeholder}
@@ -218,8 +247,6 @@ function MethodNode(props: MethodNodeProps) {
         break;
       case 'specification':
         updates.specification = createUpdatedAspect(method.specification, value, AspectState.EDITED);
-        // Mirror spec text into implementation for testing/debugging purposes
-        updates.implementation = createUpdatedAspect(method.implementation, value, AspectState.EDITED);
         break;
       case 'implementation':
         updates.implementation = createUpdatedAspect(method.implementation, value, AspectState.EDITED);
