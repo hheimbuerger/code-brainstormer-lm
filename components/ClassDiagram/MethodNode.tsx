@@ -6,10 +6,13 @@ import { useMutation } from '@tanstack/react-query';
 import { Handle, Position, useUpdateNodeInternals } from 'reactflow';
 import type { NodeProps } from 'reactflow';
 import { useCodebaseStore } from '@/store/useCodebaseStore';
-import { CodeAspect, AspectState } from '@/store/codebase.types';
-import { applyCodegenCommands, invokeCodegenForMethod } from '@/features/codegen/codegenFrontend';
+import { CodeAspect, AspectState, CodeAspectType } from '@/store/codebase.types';
+import { applyCodegenCommands, invokeCodegenForMethod, calculateAspectsToGenerate } from '@/features/codegen/codegenFrontend';
 import type { CodeMethod } from '@/store/codebase.types';
 import './MethodNode.css';
+
+// Animated spinner donut component
+const SpinnerDonut = () => <span className="spinner-donut" />;
 
 // helper to map AspectState -> emoji icon
 const getIconForState = (s?: AspectState) => {
@@ -34,6 +37,7 @@ type EditableFieldProps = {
   className?: string;
   isItalic?: boolean;
   isBold?: boolean;
+  isProcessing?: boolean;
 };
 
 const EditableField = ({
@@ -43,6 +47,7 @@ const EditableField = ({
   className = '',
   isItalic = false,
   isBold = false,
+  isProcessing = false,
   nodeId,
   fieldName,
   methodIndex,
@@ -88,41 +93,8 @@ const EditableField = ({
     }
   }, [inputValue, isEditing, autoResize]);
 
-  // React Query mutation for codegen
-  const codegenMutation = useMutation({
-    mutationFn: async ({
-      methodIndex,
-      field,
-      oldValue,
-      newValue,
-    }: {
-      methodIndex: number;
-      field: string;
-      oldValue: string;
-      newValue: string;
-    }) => {
-      return invokeCodegenForMethod(methodIndex, field);
-    },
-    onSuccess: (commands) => {
-      // apply the commands to the store
-      applyCodegenCommands(commands);
-    },
-  });
-
   const handleSave = () => {
     if (inputValue.trim() !== '' || value === '') {
-      if (
-        inputValue !== value &&
-        methodIndex !== undefined &&
-        fieldName
-      ) {
-        codegenMutation.mutate({
-          methodIndex,
-          field: fieldName,
-          oldValue: value,
-          newValue: inputValue,
-        });
-      }
       onSave(inputValue);
     }
     setIsEditing(false);
@@ -162,14 +134,8 @@ const EditableField = ({
             boxSizing: 'border-box', // Include padding in height calculations
           }}
         />
-        {codegenMutation.isPending && (
-          <span className="editable-field__status" style={{ position: 'absolute', right: 4, top: 4, fontSize: 10, color: '#888' }}>Saving...</span>
-        )}
-        {codegenMutation.isError && (
-          <span className="editable-field__status" style={{ position: 'absolute', right: 4, top: 4, fontSize: 10, color: 'red' }}>Error</span>
-        )}
-        {codegenMutation.isSuccess && (
-          <span className="editable-field__status" style={{ position: 'absolute', right: 4, top: 4, fontSize: 10, color: 'green' }}>Saved</span>
+        {isProcessing && (
+          <span className="editable-field__status" style={{ position: 'absolute', right: 4, top: 4, fontSize: 10, color: '#888' }}>Processing...</span>
         )}
       </div>
     );
@@ -179,14 +145,17 @@ const EditableField = ({
     <div
       className={`editable-field ${className}`}
       onClick={(e) => {
+        if (isProcessing) return; // Don't allow editing during processing
         e.stopPropagation();
         setIsEditing(true);
       }}
       style={{
         fontStyle: isItalic ? 'italic' : 'normal',
         fontWeight: isBold ? 'bold' : 'normal',
-        cursor: 'text',
+        cursor: isProcessing ? 'not-allowed' : 'text',
+        opacity: isProcessing ? 0.6 : 1,
         whiteSpace: 'pre-wrap', // Preserve line breaks and whitespace
+        pointerEvents: isProcessing ? 'none' : 'auto',
       }}
     >
       {value || placeholder}
@@ -218,16 +187,57 @@ function MethodNode(props: MethodNodeProps) {
   }, [nodeId, method?.implementation?.descriptor, updateNodeInternals]);
   const updateCodeMethod = useCodebaseStore(state => state.updateCodeMethod);
 
+  // State to track which fields are currently being processed
+  const [processingFields, setProcessingFields] = useState<string[]>([]);
+
+  // React Query mutation for codegen (moved from EditableField)
+  const codegenMutation = useMutation({
+    mutationFn: async ({
+      methodIndex,
+      field,
+      oldValue,
+      newValue,
+    }: {
+      methodIndex: number;
+      field: string;
+      oldValue: string;
+      newValue: string;
+    }) => {
+      // Calculate which aspects will be generated and mark them as processing
+      const aspectsToGenerate = calculateAspectsToGenerate(field as CodeAspectType, method!);
+      setProcessingFields(aspectsToGenerate);
+      return invokeCodegenForMethod(methodIndex, field);
+    },
+    onSuccess: (commands) => {
+      // apply the commands to the store
+      applyCodegenCommands(commands);
+      setProcessingFields([]);
+    },
+    onError: () => {
+      setProcessingFields([]);
+    },
+  });
+
+  // Helper function to check if a field is currently being processed
+  const isFieldProcessing = (fieldName: string) => {
+    return codegenMutation.isPending && processingFields.includes(fieldName);
+  };
+
+  // Helper function to check if any field is processing (for general UI state)
+  const isAnyFieldProcessing = () => {
+    return codegenMutation.isPending;
+  };
+
   // toggle between LOCKED and AUTOGEN for a field
   const toggleAspectState = (aspectKey: 'identifier' | 'signature' | 'specification' | 'implementation') => {
-    if (methodIndex === undefined || !method) return;
+    if (methodIndex === undefined || !method || isAnyFieldProcessing()) return;
     const currentAspect = method[aspectKey];
     const newAspectState = currentAspect.state === AspectState.LOCKED ? AspectState.AUTOGEN : AspectState.LOCKED;
     const newAspect = new CodeAspect(currentAspect.descriptor, newAspectState);
     updateCodeMethod(methodIndex, { [aspectKey]: newAspect } as Partial<CodeMethod>);
   };
 
-  const handleAspectChange = (aspect: 'identifier' | 'signature' | 'specification' | 'implementation', value: string) => {
+  const handleAspectChange = (aspect: 'identifier' | 'signature' | 'specification' | 'implementation', value: string, oldValue: string) => {
     if (methodIndex === undefined || !method) return;
 
     // Map the old field names to the new GenMethod structure
@@ -254,6 +264,16 @@ function MethodNode(props: MethodNodeProps) {
     }
 
     updateCodeMethod(methodIndex, updates); // persist aspect edits
+
+    // Trigger codegen if the value actually changed
+    if (value !== oldValue) {
+      codegenMutation.mutate({
+        methodIndex,
+        field: aspect,
+        oldValue,
+        newValue: value,
+      });
+    }
   };
 
   // Force React Flow to recalculate handle positions whenever implementation text changes
@@ -383,45 +403,58 @@ function MethodNode(props: MethodNodeProps) {
       <div className="method-node__header method-node-drag-handle" style={{position:'relative'}}>
         <EditableField
           value={method?.identifier?.descriptor || ''}
-          onSave={(value) => handleAspectChange('identifier', value)}
+          onSave={(value) => handleAspectChange('identifier', value, method?.identifier?.descriptor || '')}
           placeholder="Enter method name"
           className="method-node__identifier"
           isBold
           nodeId={nodeId}
           fieldName="identifier"
           methodIndex={methodIndex}
+          isProcessing={isFieldProcessing('identifier')}
         />
-        <span className="field-state-icon" style={{position:'absolute',top:2,right:4,cursor:'pointer'}} onClick={(e)=>{e.stopPropagation(); toggleAspectState('identifier');}}>{getIconForState(method?.identifier?.state)}</span>
+        <span className="field-state-icon" onClick={(e)=>{e.stopPropagation(); toggleAspectState('identifier');}}>
+          {isFieldProcessing('identifier') ? <SpinnerDonut /> : getIconForState(method?.identifier?.state)}
+        </span>
       </div>
 
       <div className="method-node__signature" style={{position:'relative'}}>
         <EditableField
           value={method?.signature?.descriptor || ''}
-          onSave={(value) => handleAspectChange('signature', value)}
+          onSave={(value) => handleAspectChange('signature', value, method?.signature?.descriptor || '')}
           placeholder="return type"
           isItalic
           nodeId={nodeId}
           fieldName="signature"
           methodIndex={methodIndex}
+          isProcessing={isFieldProcessing('signature')}
         />
-        <span className="field-state-icon" style={{position:'absolute',top:2,right:4,cursor:'pointer'}} onClick={(e)=>{e.stopPropagation(); toggleAspectState('signature');}}>{getIconForState(method?.signature?.state)}</span>
+        <span className="field-state-icon" onClick={(e)=>{e.stopPropagation(); toggleAspectState('signature');}}>
+          {isFieldProcessing('signature') ? <SpinnerDonut /> : getIconForState(method?.signature?.state)}
+        </span>
       </div>
 
-      <div className="method-node__specification" style={{position:'relative'}}>
+      <div className="method-node__specification">
         <EditableField
           value={method?.specification?.descriptor || ''}
-          onSave={(value) => handleAspectChange('specification', value)}
+          onSave={(value) => handleAspectChange('specification', value, method?.specification?.descriptor || '')}
           placeholder="Enter specification"
           nodeId={nodeId}
           fieldName="specification"
           methodIndex={methodIndex}
+          isProcessing={isFieldProcessing('specification')}
         />
-        <span className="field-state-icon" style={{position:'absolute',top:2,right:4,cursor:'pointer'}} onClick={(e)=>{e.stopPropagation(); toggleAspectState('specification');}}>{getIconForState(method?.specification?.state)}</span>
+        <span className="field-state-icon" onClick={(e)=>{e.stopPropagation(); toggleAspectState('specification');}}>
+          {isFieldProcessing('specification') ? <SpinnerDonut /> : getIconForState(method?.specification?.state)}
+        </span>
       </div>
 
-      <div className="method-node__implementation" style={{position:'relative', whiteSpace:'pre-wrap'}}>
-        {renderImplementation(method?.implementation?.descriptor || '')}
-        <span className="field-state-icon" style={{position:'absolute',top:2,right:4,cursor:'pointer'}} onClick={(e)=>{e.stopPropagation(); toggleAspectState('implementation');}}>{getIconForState(method?.implementation?.state)}</span>
+      <div className="method-node__implementation">
+        <div className="method-node__implementation-content">
+          {renderImplementation(method?.implementation?.descriptor || '')}
+        </div>
+        <span className="field-state-icon" onClick={(e)=>{e.stopPropagation(); toggleAspectState('implementation');}}>
+          {isFieldProcessing('implementation') ? <SpinnerDonut /> : getIconForState(method?.implementation?.state)}
+        </span>
       </div>
 
       <Handle type="source" position={Position.Bottom} id="a" />

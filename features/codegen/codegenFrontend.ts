@@ -1,5 +1,5 @@
 import { CodeGenCommand, CommandType } from './codegenCommands';
-import { CodeAspectType, CodeMethodData } from '@/store/codebase.types';
+import { CodeAspectType, CodeMethodData, CodeMethod } from '@/store/codebase.types';
 import { useCodebaseStore, createCodeMethod } from '@/store/useCodebaseStore';
 import { AspectState } from '@/store/codebase.types';
 import { packageCodebaseState, PackagedCodeMethod } from './codegenPackaging';
@@ -132,12 +132,12 @@ const ASPECT_PROGRESSION = [
  * Returns the sequence of aspects from the edited one down to the first locked aspect.
  * 
  * @param editedAspect - The aspect that was just edited
- * @param method - The current method state
+ * @param method - The current method state (can be CodeMethod or PackagedCodeMethod)
  * @returns Array of CodeAspectType values that should be generated
  */
-function calculateAspectsToGenerate(
+export function calculateAspectsToGenerate(
   editedAspect: CodeAspectType,
-  method: PackagedCodeMethod
+  method: PackagedCodeMethod | CodeMethod
 ): CodeAspectType[] {
   const editedIndex = ASPECT_PROGRESSION.indexOf(editedAspect);
   if (editedIndex === -1) {

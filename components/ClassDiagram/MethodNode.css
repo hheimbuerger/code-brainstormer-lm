@@ -64,16 +64,51 @@
 .method-node__specification, .method-node__implementation {
   font-size: 0.75em;
   color: #444;
-  padding: 8px 10px;
+  padding: 6px 6px; /* Reduced outer padding to compensate for inner padding */
   line-height: 1.3;
   background-color: white;
   border-bottom: 1px solid #e0e0e0;
+  position: relative;
+  white-space: pre-wrap; /* Unified formatting for both fields */
   /* Ensure pointer events work for hover effects */
+}
+
+/* Implementation content wrapper to match EditableField padding */
+.method-node__implementation-content {
+  padding: 2px 4px; /* Same padding as .editable-field */
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  min-height: 1em;
 }
 
 /* Remove border from the last content item */
 .method-node__specification:last-child, .method-node__implementation:last-child {
   border-bottom: none;
+}
+
+/* Field state icon positioning */
+.field-state-icon {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  cursor: pointer;
+}
+
+/* Animated spinner donut */
+.spinner-donut {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* Handle styling */

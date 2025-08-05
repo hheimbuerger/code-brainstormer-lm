@@ -57,7 +57,8 @@ export async function callLLMCodeSynthesis(
     return cloudCmds;
   }
 
-  throw new Error('No code-gen commands were generated from the cloud test or the sim backend.');
+  console.log('[DEBUG] No code-gen commands were generated from the cloud test or the sim backend.');
+  return [];
 
 
 /*   // 1. Find the next aspect in the progression.
