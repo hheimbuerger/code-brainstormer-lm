@@ -50,20 +50,19 @@ button {
   -webkit-appearance: none;
 }
 
-/* App layout styles */
-.app-layout {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
+/* Remove default focus outline for better custom styling */
+button:focus,
+input:focus {
+  outline: none;
 }
 
-.app-content {
-  flex: 1;
-  overflow: hidden;
-  position: relative;
-  appearance: none;
-  cursor: pointer;
+/* Ensure full height for the app */
+html, body {
+  height: 100%;
+}
+
+#__next {
+  height: 100%;
 }
 
 /* Remove default input styles */

@@ -2,12 +2,12 @@
 
 // Basic Next.js App Router page
 import { ReactFlowProvider } from 'reactflow';
-import ClassDiagram from "@/components/ClassDiagram/ClassDiagram";
+import ProjectCanvas from "@/components/ProjectCanvas/ProjectCanvas";
 
 export default function Page() {
   return (
     <ReactFlowProvider>
-      <ClassDiagram />
+      <ProjectCanvas />
     </ReactFlowProvider>
   );
 }

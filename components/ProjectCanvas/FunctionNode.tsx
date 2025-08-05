@@ -8,7 +8,7 @@ import type { NodeProps } from 'reactflow';
 import { useCodebaseStore } from '@/store/useCodebaseStore';
 import { CodeAspect, AspectState, CodeAspectType, CodeFunction } from '@/store/codebase.types';
 import { applyCodegenCommands, invokeCodegenForFunction, calculateAspectsToGenerate } from '@/features/codegen/codegenFrontend';
-import './MethodNode.css';
+import './FunctionNode.css';
 
 // Animated spinner donut component
 const SpinnerDonut = () => <span className="spinner-donut" />;
@@ -165,14 +165,13 @@ const EditableField = ({
 // CustomNodeData is now imported from useNodesStore.ts
 
 // Custom node data type that matches what we store in React Flow nodes
-type MethodNodeData = {
-  id: string;
+type FunctionNodeData = {
   methodIndex: number;
 };
 
-type MethodNodeProps = NodeProps<MethodNodeData>;
+type FunctionNodeProps = NodeProps<FunctionNodeData>;
 
-function MethodNode(props: MethodNodeProps) {
+function FunctionNode(props: FunctionNodeProps) {
   const { id: nodeId, data, selected } = props;
   const { methodIndex } = data;
   const updateNodeInternals = useUpdateNodeInternals();
@@ -463,4 +462,4 @@ function MethodNode(props: MethodNodeProps) {
   );
 }
 
-export default memo(MethodNode);
+export default memo(FunctionNode);

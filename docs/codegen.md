@@ -14,10 +14,10 @@ This document captures the **concept**, **principles**, and **call-flow** of the
 
 ## 2. High-level Flow (chronological)
 
-1. **User action** – e.g. *Generate Code* button click.  
+1. **User action** – e.g. editing a function aspect in `FunctionNode`.  
 2. **`packageCodebaseState`** (client) serialises the Zustand store → `PackagedCodebase`.  
-3. **The client creates a `CodegenTrigger`** object describing the user's action (e.g. which method and aspect were edited).
-4. **`invokeCodeGen` server action** is invoked with the `PackagedCodebase` and `CodegenTrigger`. *This runs on the server only.*
+3. **The client creates a `CodegenTrigger`** object describing the user's action (e.g. which function and aspect were edited).
+4. **`invokeCodegenForFunction` server action** is invoked with the `PackagedCodebase` and `CodegenTrigger`. *This runs on the server only.*
 5. **Server action** delegates to **`callLLMCodeSynthesis`** (the mocked backend) which returns a list of commands (`CodeGenCommand[]`).
 6. **`applyCodegenCommands`** (client) walks the returned array and mutates the store via its public mutators. React-Flow re-renders automatically.
 6. **Shadow code** will later be regenerated from the updated store (out of scope for this phase).
@@ -43,10 +43,11 @@ React-Flow & UI update
 ## 3. Main Modules & Entry Points
 
 | Responsibility | File | Public API | When Called | Runs On |
-|----------------|------|-----------|-------------|---------|
+|----------------|------|-----------|-------------|----------|
 | Snapshot current model | `features/codegen/codegenPackaging.ts` | `packageCodebaseState(state)` | Immediately before talking to the server | Client |
-| Invoke backend | `app/actions/codegen.ts` | `invokeCodeGen(snapshot, trigger)` | Called by client; executes on server (server action) | Server |
-| Mocked backend | `features/codegen/codegenBackend.ts` | `callLLMCodeSynthesis(snapshot)` | Only inside server action (temp) | Server |
+| Invoke backend | `app/actions/codegen.ts` | `invokeCodegenForFunction(functionIndex, field)` | Called by client; executes on server (server action) | Server |
+| Frontend logic | `features/codegen/codegenFrontEnd.ts` | `invokeCodegenForFunction`, `calculateAspectsToGenerate` | Called by FunctionNode components | Client |
+| Mocked backend | `features/codegen/codegenBackend.ts` | `callLLMCodeSynthesis(snapshot, trigger)` | Only inside server action (temp) | Server |
 | Command schema | `features/codegen/codegenCommands.ts` | `CommandType`, `CodeGenCommand`, etc. | Shared by all layers | Both |
 | Apply commands | `features/codegen/codegenApply.ts` | `applyCodegenCommands(cmds)` | After server action returns | Client |
 

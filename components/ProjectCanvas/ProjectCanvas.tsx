@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -14,12 +14,13 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
-import MethodNode from './MethodNode';
+import FunctionNode from './FunctionNode';
 import { useCodebaseStore } from '../../store/useCodebaseStore';
+import './ProjectCanvas.css';
 
 // Define nodeTypes and edgeTypes outside the component for stability
 const nodeTypes: NodeTypes = {
-  method: MethodNode,
+  method: FunctionNode,
 };
 
 const edgeTypes: EdgeTypes = {};
@@ -84,9 +85,53 @@ function buildEdges(nodes: Node[], codeFunctions: any[]): Edge[] {
   return result;
 }
 
-export default function ClassDiagram() {
-  const codeFunctions = useCodebaseStore((s) => s.codeFunctions);
+export default function ProjectCanvas() {
+  const { projectName, updateProjectName, codeFunctions } = useCodebaseStore();
+  const [isEditingProjectName, setIsEditingProjectName] = useState(false);
+  const [editValue, setEditValue] = useState(projectName);
+  const inputRef = useRef<HTMLInputElement>(null);
+  
   const initialPositions = [{x: 250, y: 100}, {x: 500, y: 50}, {x: 500, y: 300}];
+
+  // Sync editValue when projectName changes from store
+  useEffect(() => {
+    setEditValue(projectName);
+  }, [projectName]);
+
+  // Focus input when entering edit mode
+  useEffect(() => {
+    if (isEditingProjectName && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditingProjectName]);
+
+  const handleStartEdit = () => {
+    setIsEditingProjectName(true);
+  };
+
+  const handleSaveEdit = () => {
+    const trimmedValue = editValue.trim();
+    if (trimmedValue && trimmedValue !== projectName) {
+      updateProjectName(trimmedValue);
+    } else {
+      setEditValue(projectName); // Reset to original if empty or unchanged
+    }
+    setIsEditingProjectName(false);
+  };
+
+  const handleCancelEdit = () => {
+    setEditValue(projectName);
+    setIsEditingProjectName(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveEdit();
+    } else if (e.key === 'Escape') {
+      handleCancelEdit();
+    }
+  };
 
   // map codeFunctions -> initial nodes
   const initialNodes = useMemo(() =>
@@ -133,34 +178,64 @@ export default function ClassDiagram() {
     }, [nodes, codeFunctions, setEdges]);
 
   return (
-    <div style={{ width: '100%', height: '100%' }}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        onNodesChange={onNodesChange}
-        fitView
-        nodesDraggable
-        nodeDragThreshold={1}
-        onNodeDragStop={(e, dragged) => {
-          // React Flow has already updated the node's position in `dragged`
-          setNodes((nds) => nds.map((n) => (n.id === dragged.id ? dragged : n)));
-          setEdges(buildEdges(
-            nodes.map((n) => (n.id === dragged.id ? dragged : n)),
-            codeFunctions,
-          ));
-        }}
-        defaultEdgeOptions={{
-          animated: false,
-        }}
-      >
-        <Background />
-        <Controls />
-        <Panel position="top-right" className="react-flow__panel">
-          <div style={{ fontSize: '12px' }}>Drag nodes by their header</div>
-        </Panel>
-      </ReactFlow>
+    <div className="project-canvas">
+      {/* Project Banner */}
+      <div className="project-canvas__banner">
+        <div className="project-canvas__banner-content">
+          {isEditingProjectName ? (
+            <input
+              ref={inputRef}
+              type="text"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onBlur={handleSaveEdit}
+              onKeyDown={handleKeyDown}
+              className="project-canvas__title-input"
+              placeholder="Enter project name"
+            />
+          ) : (
+            <h1 
+              className="project-canvas__title" 
+              onClick={handleStartEdit}
+              title="Click to edit project name"
+            >
+              {projectName}
+            </h1>
+          )}
+          <div className="project-canvas__subtitle">Code Brainstormer</div>
+        </div>
+      </div>
+
+      {/* Canvas Area */}
+      <div className="project-canvas__diagram">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          onNodesChange={onNodesChange}
+          fitView
+          nodesDraggable
+          nodeDragThreshold={1}
+          onNodeDragStop={(e, dragged) => {
+            // React Flow has already updated the node's position in `dragged`
+            setNodes((nds) => nds.map((n) => (n.id === dragged.id ? dragged : n)));
+            setEdges(buildEdges(
+              nodes.map((n) => (n.id === dragged.id ? dragged : n)),
+              codeFunctions,
+            ));
+          }}
+          defaultEdgeOptions={{
+            animated: false,
+          }}
+        >
+          <Background />
+          <Controls />
+          <Panel position="top-right" className="react-flow__panel">
+            <div style={{ fontSize: '12px' }}>Drag nodes by their header</div>
+          </Panel>
+        </ReactFlow>
+      </div>
     </div>
   );
 }
