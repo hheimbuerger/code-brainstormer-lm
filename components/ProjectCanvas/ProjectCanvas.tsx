@@ -86,12 +86,16 @@ function buildEdges(nodes: Node[], codeFunctions: any[]): Edge[] {
 }
 
 export default function ProjectCanvas() {
-  const { projectName, updateProjectName, codeFunctions } = useCodebaseStore();
+  const { projectName, updateProjectName, codeFunctions, nodePositions, addCodeFunction, updateCodeFunction, setNodePosition, loadProjectFromFile } = useCodebaseStore();
   const [isEditingProjectName, setIsEditingProjectName] = useState(false);
   const [editValue, setEditValue] = useState(projectName);
   const inputRef = useRef<HTMLInputElement>(null);
-  
-  const initialPositions = [{x: 250, y: 100}, {x: 500, y: 50}, {x: 500, y: 300}];
+  const { setViewport } = useReactFlow();
+
+  // Load project data from external JSON on mount
+  useEffect(() => {
+    loadProjectFromFile();
+  }, [loadProjectFromFile]);
 
   // Sync editValue when projectName changes from store
   useEffect(() => {

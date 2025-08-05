@@ -10,6 +10,7 @@ import {
   type CodeFunctionData
 } from './codebase.types';
 
+import { loadProjectData } from '../data/dataLoader';
 
 
 // Helper function to create a new CodeAspect from partial data
@@ -32,19 +33,13 @@ export const createCodeFunction = (func: Partial<CodeFunctionData> = {}): CodeFu
   );
 };
 
-// Import default data
-import { getDefaultProjectData } from '../data/dataLoader';
-
-// Initialize with default data
-const defaultData = getDefaultProjectData();
-
 // Create the store
 export const useCodebaseStore = create<CodebaseState>()(
   devtools(
     (set, get) => ({
-      // Core state
-      projectName: defaultData.projectName,
-      codeFunctions: defaultData.codeFunctions,
+      // Core state - will be populated by async loading
+      projectName: 'Loading...',
+      codeFunctions: [],
       
       // Persist graph (currently no-op, kept for future)
       saveGraph: (nodes: unknown, edges: unknown) => {},
@@ -95,6 +90,18 @@ export const useCodebaseStore = create<CodebaseState>()(
             codeFunctions,
           };
         }, false, 'removeCodeFunction');
+      },
+      
+      // Async method to load project from external JSON using the data loader
+      loadProjectFromFile: async () => {
+        const projectData = await loadProjectData('/datasets/example-project.json');
+        
+        set({
+          projectName: projectData.projectName,
+          codeFunctions: projectData.codeFunctions,
+        }, false, 'loadProjectFromFile');
+        
+        console.log('Successfully loaded project from external JSON:', projectData.projectName);
       },
       
     }),

@@ -53,7 +53,7 @@
         "state": "autogen"
       },
       "implementation": {
-        "descriptor": "start(3)",
+        "descriptor": "newFunc(3)",
         "state": "autogen"
       },
       "code": "// TODO: Add example code here for method 3"

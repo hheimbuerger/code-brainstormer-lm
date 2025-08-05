@@ -93,6 +93,7 @@ export interface CodebaseState {
   addCodeFunction: () => void;
   updateCodeFunction: (index: number, func: Partial<CodeFunction>) => void;
   removeCodeFunction: (index: number) => void;
+  loadProjectFromFile: () => Promise<void>;
 
   // React Flow state
   nodes: Node<FlowNodeData>[];

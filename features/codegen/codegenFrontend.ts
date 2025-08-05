@@ -51,37 +51,8 @@ export function applyCodegenCommands(initialCmds: CodeGenCommand[]) {
           [cmd.aspect]: { descriptor: cmd.value, state: AspectState.AUTOGEN },
         });
 
-        // If the updated aspect is the implementation, scan for new function references
-        if (cmd.aspect === CodeAspectType.IMPLEMENTATION) {
-          const fnRegex = /([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g;
-          const referencedFns: Set<string> = new Set();
-          let match: RegExpExecArray | null;
-          while ((match = fnRegex.exec(cmd.value)) !== null) {
-            referencedFns.add(match[1]);
-          }
-
-          referencedFns.forEach((fnName) => {
-            // Check if function already exists in store
-            const exists = store.codeFunctions.some((f) =>
-              f.identifier.descriptor.startsWith(fnName)
-            );
-            if (!exists) {
-              const newFunction: CodeFunctionData = {
-                identifier: { descriptor: fnName, state: AspectState.AUTOGEN },
-                signature: { descriptor: '', state: AspectState.UNSET },
-                specification: { descriptor: '', state: AspectState.UNSET },
-                implementation: { descriptor: '', state: AspectState.UNSET },
-                code: '',
-              };
-
-              enqueue({
-                type: CommandType.CREATE_METHOD,
-                className: cmd.className,
-                method: newFunction,
-              });
-            }
-          });
-        }
+        // Note: Automatic function creation has been removed.
+        // Functions are now created manually via double-click on function references.
         break;
       }
 
