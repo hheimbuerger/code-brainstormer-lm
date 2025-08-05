@@ -1,0 +1,62 @@
+{
+  "projectName": "ExampleProject",
+  "functions": [
+    {
+      "identifier": {
+        "descriptor": "start",
+        "state": "edited"
+      },
+      "signature": {
+        "descriptor": "ProcessedData processData(inputData: DataModel, options: Map<String, Object>)",
+        "state": "autogen"
+      },
+      "specification": {
+        "descriptor": "This node processes the input data and applies transformations.",
+        "state": "autogen"
+      },
+      "implementation": {
+        "descriptor": "formatText(1)",
+        "state": "autogen"
+      },
+      "code": "// TODO: Add example code here for method 1"
+    },
+    {
+      "identifier": {
+        "descriptor": "formatText",
+        "state": "edited"
+      },
+      "signature": {
+        "descriptor": "AnalysisReport analyzeResults(data: List<ProcessedData>, config: AnalysisConfig)",
+        "state": "autogen"
+      },
+      "specification": {
+        "descriptor": "Performs analysis on the processed data.",
+        "state": "autogen"
+      },
+      "implementation": {
+        "descriptor": "processData(2)",
+        "state": "autogen"
+      },
+      "code": "// TODO: Add example code here for method 2"
+    },
+    {
+      "identifier": {
+        "descriptor": "processData",
+        "state": "edited"
+      },
+      "signature": {
+        "descriptor": "ProcessedData processData(inputData: DataModel, options: Map<String, Object>)",
+        "state": "autogen"
+      },
+      "specification": {
+        "descriptor": "This node processes the input data and applies transformations.",
+        "state": "autogen"
+      },
+      "implementation": {
+        "descriptor": "start(3)",
+        "state": "autogen"
+      },
+      "code": "// TODO: Add example code here for method 3"
+    }
+  ]
+}

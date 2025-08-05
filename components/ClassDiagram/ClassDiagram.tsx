@@ -45,13 +45,13 @@ const edgeTypes: EdgeTypes = {};
  * so recalculation happens only after a node is released, keeping drag
  * performance smooth.
  */
-function buildEdges(nodes: Node[], codeMethods: any[]): Edge[] {
+function buildEdges(nodes: Node[], codeFunctions: any[]): Edge[] {
   const result: Edge[] = [];
   const fnRegex = /[A-Za-z_]+(?=\()/g;
 
   nodes.forEach((srcNode) => {
     const srcIdx = parseInt(srcNode.id.replace('method-', ''), 10);
-    const method = codeMethods[srcIdx];
+    const method = codeFunctions[srcIdx];
     if (!method) return;
     const impl = method.implementation?.descriptor ?? '';
     let match: RegExpExecArray | null;
@@ -60,7 +60,7 @@ function buildEdges(nodes: Node[], codeMethods: any[]): Edge[] {
       const fnName = match[0];
       const localIndex = fnCounts[fnName] ?? 0;
       fnCounts[fnName] = localIndex + 1;
-      const tgtIdx = codeMethods.findIndex((m: any) => m.identifier?.descriptor?.startsWith(fnName));
+      const tgtIdx = codeFunctions.findIndex((f: any) => f.identifier?.descriptor?.startsWith(fnName));
       if (tgtIdx === -1) continue;
       const tgtNode = nodes.find((n) => n.id === `method-${tgtIdx}`);
       if (!tgtNode) continue;
@@ -85,12 +85,12 @@ function buildEdges(nodes: Node[], codeMethods: any[]): Edge[] {
 }
 
 export default function ClassDiagram() {
-  const codeMethods = useCodebaseStore((s) => s.codeMethods);
+  const codeFunctions = useCodebaseStore((s) => s.codeFunctions);
   const initialPositions = [{x: 250, y: 100}, {x: 500, y: 50}, {x: 500, y: 300}];
 
-  // map codeMethods -> initial nodes
+  // map codeFunctions -> initial nodes
   const initialNodes = useMemo(() =>
-    codeMethods.map((m, i) => ({
+    codeFunctions.map((f, i) => ({
       id: `method-${i}`,
       type: 'method',
       position: i < initialPositions.length ? initialPositions[i] : {x: 250 * i, y: 100},
@@ -98,39 +98,39 @@ export default function ClassDiagram() {
         methodIndex: i,
 
       },
-    })), [codeMethods]);
+    })), [codeFunctions]);
 
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
 
-  // Keep nodes array in sync with codeMethods length changes (e.g. after CREATE_METHOD)
+  // Keep nodes array in sync with codeFunctions length changes (e.g. after CREATE_METHOD)
   useEffect(() => {
     // Generate node definitions for all current methods
-    const updatedNodes = codeMethods.map((m, i) => {
+    const updatedNodes = codeFunctions.map((f, i) => {
       const existing = nodes.find((n) => n.id === `method-${i}`);
       if (existing) return existing; // preserve position and data
       return {
         id: `method-${i}`,
         type: 'method',
         position: { x: 250 * i, y: 100 },
-        data: { methodIndex: i },
+        data: { functionIndex: i },
       } as Node;
     });
 
     // Include only nodes that still have a matching method
-    const trimmedNodes = nodes.filter((n) => n.id.startsWith('method-') && parseInt(n.id.split('-')[1]!) < codeMethods.length);
+    const trimmedNodes = nodes.filter((n) => n.id.startsWith('method-') && parseInt(n.id.split('-')[1]!) < codeFunctions.length);
 
     const nextNodes = [...trimmedNodes, ...updatedNodes.filter((n) => !trimmedNodes.some((t) => t.id === n.id))];
 
     if (nextNodes.length !== nodes.length) {
       setNodes(nextNodes);
     }
-  }, [codeMethods, setNodes]);
+  }, [codeFunctions, setNodes]);
 
-    const [edges, setEdges] = useState<Edge[]>(() => buildEdges(initialNodes, codeMethods));
+    const [edges, setEdges] = useState<Edge[]>(() => buildEdges(initialNodes, codeFunctions));
 
     useEffect(() => {
-      setEdges(buildEdges(nodes, codeMethods));
-    }, [nodes, codeMethods, setEdges]);
+      setEdges(buildEdges(nodes, codeFunctions));
+    }, [nodes, codeFunctions, setEdges]);
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
@@ -148,7 +148,7 @@ export default function ClassDiagram() {
           setNodes((nds) => nds.map((n) => (n.id === dragged.id ? dragged : n)));
           setEdges(buildEdges(
             nodes.map((n) => (n.id === dragged.id ? dragged : n)),
-            codeMethods,
+            codeFunctions,
           ));
         }}
         defaultEdgeOptions={{

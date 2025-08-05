@@ -40,7 +40,7 @@ export class CodeAspect implements CodeAspectData {
   }
 }
 
-export interface CodeMethodData {
+export interface CodeFunctionData {
   identifier: Partial<CodeAspectData>;
   signature: Partial<CodeAspectData>;
   specification: Partial<CodeAspectData>;
@@ -48,7 +48,7 @@ export interface CodeMethodData {
   code: string;
 }
 
-export class CodeMethod {
+export class CodeFunction {
   
   constructor(
     public identifier: CodeAspect = new CodeAspect(),
@@ -62,7 +62,7 @@ export class CodeMethod {
 
   // For better string representation in logs and Redux DevTools
   toString() {
-    return `Method: ${this.identifier.descriptor} :: ${this.signature.descriptor}`;
+    return `Function: ${this.identifier.descriptor} :: ${this.signature.descriptor}`;
   }
   
   // For custom JSON serialization
@@ -80,24 +80,19 @@ export class CodeMethod {
 
 // Data structure for React Flow nodes
 export interface FlowNodeData {
-  methodIndex: number;
+  functionIndex: number;
 }
 
 export interface CodebaseState {
   // Core data model
-  codeClass: CodeAspect;
-  codeMethods: CodeMethod[];
-  externalClasses: string[];
+  projectName: string;
+  codeFunctions: CodeFunction[];
   
   // Core actions
-  updateCodeClass: (field: Partial<CodeAspect>) => void;
-  addCodeMethod: () => void;
-  updateCodeMethod: (index: number, method: Partial<CodeMethod>) => void;
-  removeCodeMethod: (index: number) => void;
-  
-  // External classes management
-  addExternalClass: (className: string) => void;
-  removeExternalClass: (index: number) => void;
+  updateProjectName: (name: string) => void;
+  addCodeFunction: () => void;
+  updateCodeFunction: (index: number, func: Partial<CodeFunction>) => void;
+  removeCodeFunction: (index: number) => void;
 
   // React Flow state
   nodes: Node<FlowNodeData>[];

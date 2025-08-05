@@ -6,9 +6,8 @@ import { useMutation } from '@tanstack/react-query';
 import { Handle, Position, useUpdateNodeInternals } from 'reactflow';
 import type { NodeProps } from 'reactflow';
 import { useCodebaseStore } from '@/store/useCodebaseStore';
-import { CodeAspect, AspectState, CodeAspectType } from '@/store/codebase.types';
-import { applyCodegenCommands, invokeCodegenForMethod, calculateAspectsToGenerate } from '@/features/codegen/codegenFrontend';
-import type { CodeMethod } from '@/store/codebase.types';
+import { CodeAspect, AspectState, CodeAspectType, CodeFunction } from '@/store/codebase.types';
+import { applyCodegenCommands, invokeCodegenForFunction, calculateAspectsToGenerate } from '@/features/codegen/codegenFrontend';
 import './MethodNode.css';
 
 // Animated spinner donut component
@@ -178,14 +177,16 @@ function MethodNode(props: MethodNodeProps) {
   const { methodIndex } = data;
   const updateNodeInternals = useUpdateNodeInternals();
 
-  // Select only the required slice so the node re-renders whenever this method changes
-  const method = useCodebaseStore(state => state.codeMethods[methodIndex]);
+  // Get store data first
+  const { codeFunctions, updateCodeFunction } = useCodebaseStore();
+  
+  // Select only the required slice so the node re-renders whenever this function changes
+  const method = methodIndex !== undefined ? codeFunctions[methodIndex] : undefined;
 
   // Force React Flow to recalculate handle positions whenever implementation text changes
   useEffect(() => {
     updateNodeInternals(nodeId);
   }, [nodeId, method?.implementation?.descriptor, updateNodeInternals]);
-  const updateCodeMethod = useCodebaseStore(state => state.updateCodeMethod);
 
   // State to track which fields are currently being processed
   const [processingFields, setProcessingFields] = useState<string[]>([]);
@@ -206,7 +207,7 @@ function MethodNode(props: MethodNodeProps) {
       // Calculate which aspects will be generated and mark them as processing
       const aspectsToGenerate = calculateAspectsToGenerate(field as CodeAspectType, method!);
       setProcessingFields(aspectsToGenerate);
-      return invokeCodegenForMethod(methodIndex, field);
+      return invokeCodegenForFunction(methodIndex, field);
     },
     onSuccess: (commands) => {
       // apply the commands to the store
@@ -234,14 +235,14 @@ function MethodNode(props: MethodNodeProps) {
     const currentAspect = method[aspectKey];
     const newAspectState = currentAspect.state === AspectState.LOCKED ? AspectState.AUTOGEN : AspectState.LOCKED;
     const newAspect = new CodeAspect(currentAspect.descriptor, newAspectState);
-    updateCodeMethod(methodIndex, { [aspectKey]: newAspect } as Partial<CodeMethod>);
+    updateCodeFunction(methodIndex, { [aspectKey]: newAspect } as Partial<CodeFunction>);
   };
 
   const handleAspectChange = (aspect: 'identifier' | 'signature' | 'specification' | 'implementation', value: string, oldValue: string) => {
     if (methodIndex === undefined || !method) return;
 
-    // Map the old field names to the new GenMethod structure
-    const updates: Partial<CodeMethod> = {};
+    // Map the old field names to the new GenFunction structure
+    const updates: Partial<CodeFunction> = {};
 
     // Helper function to create a new CodeAspect with updated descriptor and set state to EDITED
     const createUpdatedAspect = (aspect: CodeAspect, descriptor: string, newState: AspectState = AspectState.EDITED): CodeAspect => {
@@ -263,7 +264,7 @@ function MethodNode(props: MethodNodeProps) {
         break;
     }
 
-    updateCodeMethod(methodIndex, updates); // persist aspect edits
+    updateCodeFunction(methodIndex, updates); // persist aspect edits
 
     // Trigger codegen if the value actually changed
     if (value !== oldValue) {

@@ -1,14 +1,13 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { exampleExternalClasses, exampleCodeClass, exampleCodeMethods } from '../data/generated-code-example';
 
 import {
   AspectState,
   CodeAspect,
-  CodeMethod,
+  CodeFunction,
   type CodebaseState,
   type CodeAspectData,
-  type CodeMethodData
+  type CodeFunctionData
 } from './codebase.types';
 
 
@@ -21,96 +20,81 @@ const createCodeAspect = (field: Partial<CodeAspectData> = {}): CodeAspect => {
   );
 };
 
-// Helper function to create a new CodeMethod from partial data
-export const createCodeMethod = (method: Partial<CodeMethodData> = {}): CodeMethod => {
+// Helper function to create a new CodeFunction from partial data
+export const createCodeFunction = (func: Partial<CodeFunctionData> = {}): CodeFunction => {
   
-  return new CodeMethod(
-    createCodeAspect(method.identifier || {}),
-    createCodeAspect(method.signature || {}),
-    createCodeAspect(method.specification || {}),
-    createCodeAspect(method.implementation || {}),
-    method.code ?? ''
+  return new CodeFunction(
+    createCodeAspect(func.identifier || {}),
+    createCodeAspect(func.signature || {}),
+    createCodeAspect(func.specification || {}),
+    createCodeAspect(func.implementation || {}),
+    func.code ?? ''
   );
 };
+
+// Import default data
+import { getDefaultProjectData } from '../data/dataLoader';
+
+// Initialize with default data
+const defaultData = getDefaultProjectData();
 
 // Create the store
 export const useCodebaseStore = create<CodebaseState>()(
   devtools(
     (set, get) => ({
       // Core state
-      codeClass: exampleCodeClass,
-      codeMethods: exampleCodeMethods,
-      externalClasses: exampleExternalClasses,
+      projectName: defaultData.projectName,
+      codeFunctions: defaultData.codeFunctions,
       
       // Persist graph (currently no-op, kept for future)
       saveGraph: (nodes: unknown, edges: unknown) => {},
 
-      // Update the class fields
-      updateCodeClass: (field: Partial<CodeAspect>) => {
-        const updatedClass = createCodeAspect({
-          ...exampleCodeClass,
-          ...field
-        });
-        
-        set({ codeClass: updatedClass }, false, 'updateCodeClass');
+      // Update the project name
+      updateProjectName: (name: string) => {
+        set({ projectName: name }, false, 'updateProjectName');
       },
       
-      // Add a new method
-      addCodeMethod: () => {
+      // Add a new function
+      addCodeFunction: () => {
         set((state) => {
-          const codeMethods = [...state.codeMethods, createCodeMethod()];
+          const codeFunctions = [...state.codeFunctions, createCodeFunction()];
           return {
-            codeMethods,
+            codeFunctions,
           };
-        }, false, 'addCodeMethod');
+        }, false, 'addCodeFunction');
       },
       
-      // Update an existing method
-      updateCodeMethod: (index, method) => {
+      // Update an existing function
+      updateCodeFunction: (index: number, func: Partial<CodeFunction>) => {
         set((state) => {
-          const existingMethod = state.codeMethods[index];
-          if (!existingMethod) return state;
+          const existingFunction = state.codeFunctions[index];
+          if (!existingFunction) return state;
           
-          const updatedMethod = createCodeMethod({
-            identifier: { ...existingMethod.identifier, ...method.identifier },
-            signature: { ...existingMethod.signature, ...method.signature },
-            specification: { ...existingMethod.specification, ...method.specification },
-            implementation: { ...existingMethod.implementation, ...method.implementation },
-            code: method.code ?? existingMethod.code,
+          const updatedFunction = createCodeFunction({
+            identifier: { ...existingFunction.identifier, ...func.identifier },
+            signature: { ...existingFunction.signature, ...func.signature },
+            specification: { ...existingFunction.specification, ...func.specification },
+            implementation: { ...existingFunction.implementation, ...func.implementation },
+            code: func.code ?? existingFunction.code,
           });
           
-          const codeMethods = [...state.codeMethods];
-          codeMethods[index] = updatedMethod;
+          const codeFunctions = [...state.codeFunctions];
+          codeFunctions[index] = updatedFunction;
           
           return {
-            codeMethods,
+            codeFunctions,
           };
-        }, false, 'updateCodeMethod');
+        }, false, 'updateCodeFunction');
       },
-      
-      // Remove a method by index
-      removeCodeMethod: (index) => {
+
+      // Remove a function by index
+      removeCodeFunction: (index: number) => {
         set((state) => {
-          const codeMethods = state.codeMethods.filter((_, i) => i !== index);
+          const codeFunctions = state.codeFunctions.filter((_, i) => i !== index);
           return {
-            codeMethods,
+            codeFunctions,
           };
-        }, false, 'removeCodeMethod');
-      },
-      
-      // Add a new external class
-      addExternalClass: (className: string) => {
-        if (!className.trim()) return;
-        set((state) => ({
-          externalClasses: [...new Set([...state.externalClasses, className.trim()])]
-        }), false, 'addExternalClass');
-      },
-      
-      // Remove an external class by index
-      removeExternalClass: (index: number) => {
-        set((state) => ({
-          externalClasses: state.externalClasses.filter((_, i) => i !== index)
-        }), false, 'removeExternalClass');
+        }, false, 'removeCodeFunction');
       },
       
     }),

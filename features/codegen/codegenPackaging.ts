@@ -1,7 +1,7 @@
 import {
   AspectState,
   CodebaseState,
-  CodeMethod,
+  CodeFunction,
   CodeAspect,
 } from '@/store/codebase.types';
 
@@ -14,7 +14,7 @@ export interface PackagedAspect {
   state: AspectState;
 }
 
-export interface PackagedCodeMethod {
+export interface PackagedCodeFunction {
   identifier: PackagedAspect;
   signature: PackagedAspect;
   specification: PackagedAspect;
@@ -24,8 +24,7 @@ export interface PackagedCodeMethod {
 
 export interface PackagedCodebase {
   project: string;
-  functions: PackagedCodeMethod[];
-  externalClasses: string[];
+  functions: PackagedCodeFunction[];
 }
 
 /**
@@ -37,7 +36,7 @@ export interface PackagedCodebase {
 export function packageCodebaseState(state: CodebaseState): PackagedCodebase {
   // return {
   //   codeClass: { descriptor: state.codeClass.descriptor, state: state.codeClass.state },
-  //   methods: state.codeMethods.map((m: CodeMethod) => ({
+  //   functions: state.codeFunctions.map((f: CodeFunction) => ({
   //     identifier: { descriptor: m.identifier.descriptor, state: m.identifier.state },
   //     signature: { descriptor: m.signature.descriptor, state: m.signature.state },
   //     specification: { descriptor: m.specification.descriptor, state: m.specification.state },
@@ -47,14 +46,13 @@ export function packageCodebaseState(state: CodebaseState): PackagedCodebase {
   //   externalClasses: [...state.externalClasses],
   // };
   return {
-    project: state.codeClass.descriptor,
-    functions: state.codeMethods.map((m: CodeMethod) => ({
-      identifier: { descriptor: m.identifier.descriptor, state: m.identifier.state },
-      signature: { descriptor: m.signature.descriptor, state: m.signature.state },
-      specification: { descriptor: m.specification.descriptor, state: m.specification.state },
-      implementation: { descriptor: m.implementation.descriptor, state: m.implementation.state },
-      code: m.code,
+    project: state.projectName,
+    functions: state.codeFunctions.map((f: CodeFunction) => ({
+      identifier: { descriptor: f.identifier.descriptor, state: f.identifier.state },
+      signature: { descriptor: f.signature.descriptor, state: f.signature.state },
+      specification: { descriptor: f.specification.descriptor, state: f.specification.state },
+      implementation: { descriptor: f.implementation.descriptor, state: f.implementation.state },
+      code: f.code,
     })),
-    externalClasses: [...state.externalClasses],
   };
 }

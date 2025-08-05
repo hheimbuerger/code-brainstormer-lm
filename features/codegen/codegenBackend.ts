@@ -1,6 +1,6 @@
-import { PackagedCodebase, PackagedCodeMethod } from './codegenPackaging';
-import { CodeGenCommand, CommandType } from './codegenCommands';
-import { AspectState, CodeAspectType } from '@/store/codebase.types';
+import { PackagedCodebase, PackagedCodeFunction } from './codegenPackaging';
+import { CodeGenCommand } from './codegenCommands';
+import { CodeAspectType } from '@/store/codebase.types';
 import { cloudLlmGenerateCode } from './codegenCloudLlm';
 
 /* // Defines the progression of aspects for code generation.
@@ -28,10 +28,10 @@ const PLACEHOLDERS: Record<CodeAspectType, string> = {
  * Information about what user action triggered the code-generation call.
  */
 export type CodegenTrigger = {
-  /** The method that was just edited. */
-  method: PackagedCodeMethod;
-  /** The specific aspect of the method that was changed. */
-  aspect: CodeAspectType;
+  /** The function that was just edited. */
+  modifiedFunction: PackagedCodeFunction;
+  /** The specific aspect of the function that was changed. */
+  modifiedAspect: CodeAspectType;
   /** The sequence of aspects to generate, from the edited one down to the first locked aspect. */
   aspectsToGenerate: CodeAspectType[];
 };
@@ -48,7 +48,6 @@ export async function callLLMCodeSynthesis(
   trigger: CodegenTrigger
 ): Promise<CodeGenCommand[]> {
   console.log('[DEBUG] Entered callLLMCodeSynthesis.');
-  const { method: triggeredMethod, aspect: triggeredAspect } = trigger;
 
   // Call remote LLM (hard-coded test). If we get valid commands, return early
   const cloudCmds = await cloudLlmGenerateCode(snapshot, trigger);

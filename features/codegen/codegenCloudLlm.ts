@@ -55,7 +55,6 @@ export const SYSTEM_PROMPT = `
 
   DO NOT RETURN ANY MARKDOWN AROUND IT, ONLY JSON!
 `;
-import { CodeAspectType } from '@/store/codebase.types';
 import { CodegenTrigger } from './codegenBackend';
 import { PackagedCodebase } from './codegenPackaging';
 
@@ -100,16 +99,21 @@ export async function cloudLlmGenerateCode(snapshot: PackagedCodebase, trigger: 
     ? trigger.aspectsToGenerate.join(', ')
     : 'none (all subsequent aspects are locked or already complete)';
 
+  console.log(`[DEBUG] Cloud LLM called with trigger aspect: ${trigger.modifiedAspect}, method: ${trigger.modifiedFunction.identifier.descriptor}`);
+  console.log(`[DEBUG] Method: ${trigger.modifiedFunction}, aspect: ${trigger.modifiedAspect}`);
+  
+  const functionName = trigger.modifiedFunction.identifier.descriptor;
+  
   const prompt: string = `
     Here is the current state of the codebase:
     ${JSON.stringify(snapshot)}
 
-    You have been given a new aspect '${trigger.aspect}' of the function '${trigger.method.identifier.descriptor}'. The new value is:
-    ${trigger.method[trigger.aspect].descriptor}
+    You have been given a new aspect '${trigger.modifiedAspect}' of the function '${functionName}'. The new value is:
+    ${trigger.modifiedFunction[trigger.modifiedAspect].descriptor}
 
-    Based on this change, you should generate the following aspects of the function '${trigger.method.identifier.descriptor}': ${aspectsToGenerateText}
+    Based on this change, you should generate the following aspects of the function '${functionName}': ${aspectsToGenerateText}
 
-    Please generate appropriate values for each of these aspects, taking into account the updated ${trigger.aspect} and the current state of the function.
+    Please generate appropriate values for each of these aspects, taking into account the updated ${trigger.modifiedAspect} and the current state of the function.
   `;
   console.log('[DEBUG] Prompt:', prompt);
 

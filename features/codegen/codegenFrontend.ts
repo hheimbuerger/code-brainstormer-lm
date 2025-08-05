@@ -1,8 +1,8 @@
 import { CodeGenCommand, CommandType } from './codegenCommands';
-import { CodeAspectType, CodeMethodData, CodeMethod } from '@/store/codebase.types';
-import { useCodebaseStore, createCodeMethod } from '@/store/useCodebaseStore';
+import { CodeAspectType, CodeFunctionData } from '@/store/codebase.types';
+import { useCodebaseStore, createCodeFunction } from '@/store/useCodebaseStore';
 import { AspectState } from '@/store/codebase.types';
-import { packageCodebaseState, PackagedCodeMethod } from './codegenPackaging';
+import { packageCodebaseState } from './codegenPackaging';
 import { invokeCodeGen } from '@/app/actions/codegen';
 import { CodegenTrigger } from './codegenBackend';
 
@@ -28,26 +28,26 @@ export function applyCodegenCommands(initialCmds: CodeGenCommand[]) {
 
     switch (cmd.type) {
       case CommandType.CREATE_METHOD: {
-        store.addCodeMethod();
+        store.addCodeFunction();
         // Retrieve fresh state (after mutation) and its helpers
         const updatedStore = useCodebaseStore.getState();
-        const newIndex = updatedStore.codeMethods.length - 1;
-        const newMethod = createCodeMethod(cmd.method);
-        updatedStore.updateCodeMethod(newIndex, newMethod);
+        const newIndex = updatedStore.codeFunctions.length - 1;
+        const newFunction = createCodeFunction(cmd.method);
+        updatedStore.updateCodeFunction(newIndex, newFunction);
         // Example: enqueue further commands if needed
         // enqueue(cmdsToEnqueue);
         break;
       }
 
       case CommandType.UPDATE_ASPECT: {
-        const methodIndex = store.codeMethods.findIndex(
-          (m) => m.identifier.descriptor === cmd.methodName
+        const functionIndex = store.codeFunctions.findIndex(
+          (f) => f.identifier.descriptor === cmd.methodName
         );
-        if (methodIndex === -1) {
-          console.warn('Could not find method to update:', cmd.methodName);
+        if (functionIndex === -1) {
+          console.warn('Could not find function to update:', cmd.methodName);
           break;
         }
-        store.updateCodeMethod(methodIndex, {
+        store.updateCodeFunction(functionIndex, {
           [cmd.aspect]: { descriptor: cmd.value, state: AspectState.AUTOGEN },
         });
 
@@ -61,12 +61,12 @@ export function applyCodegenCommands(initialCmds: CodeGenCommand[]) {
           }
 
           referencedFns.forEach((fnName) => {
-            // Check if method already exists in store
-            const exists = store.codeMethods.some((m) =>
-              m.identifier.descriptor.startsWith(fnName)
+            // Check if function already exists in store
+            const exists = store.codeFunctions.some((f) =>
+              f.identifier.descriptor.startsWith(fnName)
             );
             if (!exists) {
-              const newMethod: CodeMethodData = {
+              const newFunction: CodeFunctionData = {
                 identifier: { descriptor: fnName, state: AspectState.AUTOGEN },
                 signature: { descriptor: '', state: AspectState.UNSET },
                 specification: { descriptor: '', state: AspectState.UNSET },
@@ -77,7 +77,7 @@ export function applyCodegenCommands(initialCmds: CodeGenCommand[]) {
               enqueue({
                 type: CommandType.CREATE_METHOD,
                 className: cmd.className,
-                method: newMethod,
+                method: newFunction,
               });
             }
           });
@@ -86,27 +86,27 @@ export function applyCodegenCommands(initialCmds: CodeGenCommand[]) {
       }
 
       case CommandType.DELETE_METHOD: {
-        const methodIndex = store.codeMethods.findIndex(
+        const methodIndex = store.codeFunctions.findIndex(
           (m) => m.identifier.descriptor === cmd.methodName
         );
         if (methodIndex === -1) {
           console.warn('Could not find method to delete:', cmd.methodName);
           break;
         }
-        store.removeCodeMethod(methodIndex);
+        store.removeCodeFunction(methodIndex);
         // enqueue(...)
         break;
       }
 
       case CommandType.UPDATE_METHOD_CODE: {
-        const methodIndex = store.codeMethods.findIndex(
+        const methodIndex = store.codeFunctions.findIndex(
           (m) => m.identifier.descriptor === cmd.methodName
         );
         if (methodIndex === -1) {
           console.warn('Could not find method to update code for:', cmd.methodName);
           break;
         }
-        store.updateCodeMethod(methodIndex, { code: cmd.value });
+        store.updateCodeFunction(methodIndex, { code: cmd.value });
         // enqueue(...)
         break;
       }
@@ -128,16 +128,27 @@ const ASPECT_PROGRESSION = [
 ];
 
 /**
- * Determines which aspects should be generated based on the edited aspect and the current state of the method.
+ * Interface for function objects that can be used with calculateAspectsToGenerate.
+ * Both CodeFunction and PackagedCodeFunction satisfy this interface.
+ */
+interface FunctionWithAspects {
+  identifier: { descriptor: string; state: AspectState };
+  signature: { descriptor: string; state: AspectState };
+  specification: { descriptor: string; state: AspectState };
+  implementation: { descriptor: string; state: AspectState };
+}
+
+/**
+ * Determines which aspects should be generated based on the edited aspect and the current state of the function.
  * Returns the sequence of aspects from the edited one down to the first locked aspect.
  * 
  * @param editedAspect - The aspect that was just edited
- * @param method - The current method state (can be CodeMethod or PackagedCodeMethod)
+ * @param func - The current function state (CodeFunction or PackagedCodeFunction)
  * @returns Array of CodeAspectType values that should be generated
  */
 export function calculateAspectsToGenerate(
   editedAspect: CodeAspectType,
-  method: PackagedCodeMethod | CodeMethod
+  func: FunctionWithAspects
 ): CodeAspectType[] {
   const editedIndex = ASPECT_PROGRESSION.indexOf(editedAspect);
   if (editedIndex === -1) {
@@ -150,7 +161,7 @@ export function calculateAspectsToGenerate(
   // Start from the aspect after the edited one
   for (let i = editedIndex + 1; i < ASPECT_PROGRESSION.length; i++) {
     const aspectType = ASPECT_PROGRESSION[i];
-    const aspectState = method[aspectType].state;
+    const aspectState = func[aspectType].state;
     
     // If this aspect is locked, stop here
     if (aspectState === AspectState.LOCKED) {
@@ -165,19 +176,19 @@ export function calculateAspectsToGenerate(
 }
 
 /**
- * Helper function to invoke code generation for a specific method and aspect.
+ * Helper function to invoke code generation for a specific function and aspect.
  * Packages the current codebase state and creates a trigger for the backend.
  * 
- * @param methodIndex - Index of the method in the codebase state
+ * @param functionIndex - Index of the function in the codebase state
  * @param field - The aspect field being updated (e.g., 'implementation', 'specification')
  * @returns Promise resolving to an array of CodeGenCommand objects
  */
-export async function invokeCodegenForMethod(
-  methodIndex: number,
+export async function invokeCodegenForFunction(
+  functionIndex: number,
   field: string
 ): Promise<CodeGenCommand[]> {
   console.log(
-    `[DEBUG] Codegen invoked for method index ${methodIndex}, field ${field}`,
+    `[DEBUG] Codegen invoked for function index ${functionIndex}, field ${field}`,
   );
   const codebaseState = useCodebaseStore.getState();
 
@@ -185,23 +196,23 @@ export async function invokeCodegenForMethod(
   const packagedState = packageCodebaseState(codebaseState);
   console.log('[DEBUG] Codebase state has been packaged.');
 
-  const triggeredMethod = packagedState.functions[methodIndex];
+  const triggeredFunction = packagedState.functions[functionIndex];
 
-  if (!triggeredMethod) {
-    console.warn('Could not find triggered method for codegen');
+  if (!triggeredFunction) {
+    console.warn('Could not find triggered function for codegen');
     return [];
   }
 
   // Calculate which aspects should be generated
   const aspectsToGenerate = calculateAspectsToGenerate(
     field as CodeAspectType,
-    triggeredMethod
+    triggeredFunction
   );
 
   // Create the trigger object on the client
   const trigger: CodegenTrigger = {
-    method: triggeredMethod,
-    aspect: field as CodeAspectType,
+    modifiedFunction: triggeredFunction,
+    modifiedAspect: field as CodeAspectType,
     aspectsToGenerate,
   };
 

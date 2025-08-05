@@ -1,4 +1,4 @@
-import { CodeMethodData, CodeAspectType } from '@/store/codebase.types';
+import { CodeFunctionData, CodeAspectType } from '@/store/codebase.types';
 
 // -----------------------------------------------------------------------------
 // Command definitions for code-generation operations currently supported.
@@ -28,7 +28,7 @@ export interface BaseCommand {
 export interface CreateMethodCommand extends BaseCommand {
   type: CommandType.CREATE_METHOD;
   className: string;
-  method: CodeMethodData;
+  method: CodeFunctionData;
 }
 
 export interface DeleteMethodCommand extends BaseCommand {
