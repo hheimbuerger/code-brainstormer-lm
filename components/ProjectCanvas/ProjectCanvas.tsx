@@ -334,9 +334,9 @@ export default function ProjectCanvas() {
           >
             <Background />
             <Controls />
-            <Panel position="top-right" className="react-flow__panel">
+            {/* <Panel position="top-right" className="react-flow__panel">
               <div style={{ fontSize: '12px' }}>Drag nodes by their header</div>
-            </Panel>
+            </Panel> */}
           </ReactFlow>
         </div>
       </div>

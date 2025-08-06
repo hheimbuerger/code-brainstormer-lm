@@ -287,14 +287,52 @@ function FunctionNode(props: FunctionNodeProps) {
   const handleAspectChange = (aspect: 'identifier' | 'signature' | 'specification' | 'implementation', value: string, oldValue: string) => {
     if (methodIndex === undefined || !method) return;
 
-    // Map the old field names to the new GenFunction structure
-    const updates: Partial<CodeFunction> = {};
-
     // Helper function to create a new CodeAspect with updated descriptor and set state to EDITED
     const createUpdatedAspect = (aspect: CodeAspect, descriptor: string, newState: AspectState = AspectState.EDITED): CodeAspect => {
       return new CodeAspect(descriptor, newState);
     };
 
+    // STEP 1: Handle identifier renaming - update function references in other functions FIRST
+    if (aspect === 'identifier' && value !== oldValue && oldValue.trim() && value.trim()) {
+      // Extract function names (remove any parameters or extra text)
+      const oldFunctionName = oldValue.split('(')[0].trim();
+      const newFunctionName = value.split('(')[0].trim();
+      
+      if (oldFunctionName && newFunctionName && oldFunctionName !== newFunctionName) {
+        console.log(`Renaming function references from '${oldFunctionName}' to '${newFunctionName}'`);
+        
+        // Update all other functions that reference the old function name
+        codeFunctions.forEach((func, index) => {
+          if (index === methodIndex) return; // Skip the current function being renamed
+          
+          const implementation = func.implementation?.descriptor || '';
+          if (!implementation) return;
+          
+          // Create regex to match function calls: oldFunctionName followed by (
+          const functionCallRegex = new RegExp(`\\b${oldFunctionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=\\()`, 'g');
+          
+          if (functionCallRegex.test(implementation)) {
+            // Replace all occurrences of the old function name with the new one
+            const updatedImplementation = implementation.replace(functionCallRegex, newFunctionName);
+            
+            console.log(`Updated function ${index}: ${func.identifier?.descriptor} - replaced '${oldFunctionName}' with '${newFunctionName}'`);
+            
+            // Update the function with the new implementation
+            // Preserve the original aspect state unless it was UNSET
+            const currentState = func.implementation?.state || AspectState.UNSET;
+            const newState = currentState === AspectState.UNSET ? AspectState.EDITED : currentState;
+            
+            updateCodeFunction(index, {
+              implementation: new CodeAspect(updatedImplementation, newState)
+            });
+          }
+        });
+      }
+    }
+
+    // STEP 2: Update the current function's aspect
+    const updates: Partial<CodeFunction> = {};
+    
     switch (aspect) {
       case 'identifier':
         updates.identifier = createUpdatedAspect(method.identifier, value, AspectState.EDITED);
@@ -312,7 +350,7 @@ function FunctionNode(props: FunctionNodeProps) {
 
     updateCodeFunction(methodIndex, updates); // persist aspect edits
 
-    // Trigger codegen if the value actually changed
+    // STEP 3: Trigger codegen if the value actually changed (this now happens AFTER reference updates)
     if (value !== oldValue) {
       triggerCodegenForFunction(aspect, oldValue, value);
     }
