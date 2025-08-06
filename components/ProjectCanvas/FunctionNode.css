@@ -197,6 +197,57 @@
   filter: drop-shadow(0 0 2px rgba(0, 102, 204, 0.5));
 }
 
+/* Function reference styling */
+.inline-fn-call {
+  position: relative;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background-color 0.2s;
+}
+
+.inline-fn-call:hover {
+  background-color: rgba(0, 102, 204, 0.1);
+}
+
+/* Existing function references */
+.inline-fn-call.existing-function {
+  color: #0066cc;
+}
+
+.inline-fn-call.existing-function:hover {
+  background-color: rgba(0, 102, 204, 0.15);
+  text-decoration: underline;
+}
+
+/* New function references */
+.inline-fn-call.new-function {
+  color: #cc6600;
+  font-weight: 500;
+}
+
+.inline-fn-call.new-function:hover {
+  background-color: rgba(204, 102, 0, 0.15);
+  text-decoration: underline;
+}
+
+/* New function indicator (asterisk) */
+.new-function-indicator {
+  color: #ff6600;
+  font-weight: bold;
+  font-size: 1.1em;
+  margin-left: 2px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
 .method-node {
   overflow: visible !important;
 }

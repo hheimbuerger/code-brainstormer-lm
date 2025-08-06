@@ -40,6 +40,7 @@ export const useCodebaseStore = create<CodebaseState>()(
       // Core state - will be populated by async loading
       projectName: 'Loading...',
       codeFunctions: [],
+      nodePositions: {}, // Store positions for each function by index
       
       // Persist graph (currently no-op, kept for future)
       saveGraph: (nodes: unknown, edges: unknown) => {},
@@ -49,14 +50,31 @@ export const useCodebaseStore = create<CodebaseState>()(
         set({ projectName: name }, false, 'updateProjectName');
       },
       
-      // Add a new function
-      addCodeFunction: () => {
+      // Add a new function with required position
+      addCodeFunction: (position: { x: number; y: number }) => {
         set((state) => {
+          const newIndex = state.codeFunctions.length;
           const codeFunctions = [...state.codeFunctions, createCodeFunction()];
+          const nodePositions = { ...state.nodePositions };
+          
+          // Always use provided position - no fallbacks
+          nodePositions[newIndex] = position;
+          
           return {
             codeFunctions,
+            nodePositions,
           };
         }, false, 'addCodeFunction');
+      },
+      
+      // Set position for a specific node
+      setNodePosition: (index: number, position: { x: number; y: number }) => {
+        set((state) => ({
+          nodePositions: {
+            ...state.nodePositions,
+            [index]: position,
+          },
+        }), false, 'setNodePosition');
       },
       
       // Update an existing function
@@ -96,12 +114,41 @@ export const useCodebaseStore = create<CodebaseState>()(
       loadProjectFromFile: async () => {
         const projectData = await loadProjectData('/datasets/example-project.json');
         
+        // Extract node positions from the loaded data
+        const nodePositions: { [functionIndex: number]: { x: number; y: number } } = {};
+        if (projectData.nodes) {
+          projectData.nodes.forEach((node, index) => {
+            nodePositions[index] = node.position;
+          });
+        } else {
+          // For sample data without nodes, use placement algorithm to generate positions
+          const { findOptimalNodePlacement } = await import('../utils/nodePlacement');
+          const existingNodes: any[] = [];
+          
+          projectData.codeFunctions.forEach((_, index) => {
+            const startPosition = { x: 100, y: 100 };
+            const optimalPosition = findOptimalNodePlacement(startPosition, existingNodes);
+            nodePositions[index] = optimalPosition;
+            
+            // Add to existing nodes for next placement calculation
+            existingNodes.push({
+              id: `method-${index}`,
+              position: optimalPosition,
+              width: 280,
+              height: 200,
+              data: { methodIndex: index },
+              type: 'method' as const,
+            });
+          });
+        }
+        
         set({
           projectName: projectData.projectName,
           codeFunctions: projectData.codeFunctions,
+          nodePositions,
         }, false, 'loadProjectFromFile');
         
-        console.log('Successfully loaded project from external JSON:', projectData.projectName);
+        console.log('Successfully loaded project from external JSON:', projectData.projectName, 'with', Object.keys(nodePositions).length, 'node positions');
       },
       
     }),

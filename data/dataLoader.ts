@@ -10,6 +10,7 @@ import {
   parseAspectState
 } from './projectSchema';
 import { Node, Edge } from 'reactflow';
+import { findOptimalNodePlacement } from '../utils/nodePlacement';
 
 // Convert ProjectFunction to CodeFunction
 const projectFunctionToCodeFunction = (func: ProjectFunction): CodeFunction => {
@@ -78,20 +79,49 @@ export const loadProjectData = async (jsonPath: string): Promise<{
       };
     }
     
-    // If this is persisted state, extract UI data
-    const nodes: Node[] = data.functions.map((func, index) => {
-      const ui = functionHasUIState(func) ? func.ui : generateDefaultFunctionUI(index);
-      return {
+    // Generate positions using placement algorithm for sample data
+    const nodes: Node[] = [];
+    const existingNodes: Node[] = [];
+    
+    for (let index = 0; index < data.functions.length; index++) {
+      const func = data.functions[index];
+      let ui: NonNullable<ProjectFunction['ui']>;
+      
+      if (functionHasUIState(func)) {
+        ui = func.ui;
+      } else {
+        // For sample data without UI state, generate position using placement algorithm
+        const startPosition = { x: 100, y: 100 }; // Starting point for first node
+        const optimalPosition = findOptimalNodePlacement(startPosition, existingNodes);
+        ui = {
+          id: `function-${index}`,
+          position: optimalPosition,
+          selected: false,
+          dragging: false,
+          width: 280,
+          height: 200
+        };
+      }
+      
+      // Ensure position is always defined
+      if (!ui.position) {
+        throw new Error(`Function ${index} missing position in UI state`);
+      }
+      
+      const node: Node = {
         id: ui.id || `function-${index}`,
         type: 'methodNode',
-        position: ui.position || { x: 100 + (index % 3) * 300, y: 100 + Math.floor(index / 3) * 200 },
+        position: ui.position,
         data: { functionIndex: index },
         selected: ui.selected || false,
         dragging: ui.dragging || false,
         width: ui.width || 280,
         height: ui.height || 200
       };
-    });
+      
+      nodes.push(node);
+      existingNodes.push(node); // Add to existing nodes for next placement calculation
+    }
     
     return {
       projectName: data.projectName,
@@ -166,34 +196,4 @@ export const saveProjectData = (
   }
   
   return projectData;
-};
-
-// For development, we can also provide a synchronous version with default data
-export const getDefaultProjectData = (): { projectName: string; codeFunctions: CodeFunction[] } => {
-  return {
-    projectName: 'ExampleProject',
-    codeFunctions: [
-      new CodeFunction(
-        new CodeAspect('start', AspectState.EDITED),
-        new CodeAspect('ProcessedData processData(inputData: DataModel, options: Map<String, Object>)', AspectState.AUTOGEN),
-        new CodeAspect('This node processes the input data and applies transformations.', AspectState.AUTOGEN),
-        new CodeAspect('formatText(1)', AspectState.AUTOGEN),
-        '// TODO: Add example code here for function 1'
-      ),
-      new CodeFunction(
-        new CodeAspect('formatText', AspectState.EDITED),
-        new CodeAspect('AnalysisReport analyzeResults(data: List<ProcessedData>, config: AnalysisConfig)', AspectState.AUTOGEN),
-        new CodeAspect('Performs analysis on the processed data.', AspectState.AUTOGEN),
-        new CodeAspect('processData(2)', AspectState.AUTOGEN),
-        '// TODO: Add example code here for function 2'
-      ),
-      new CodeFunction(
-        new CodeAspect('processData', AspectState.EDITED),
-        new CodeAspect('ProcessedData processData(inputData: DataModel, options: Map<String, Object>)', AspectState.AUTOGEN),
-        new CodeAspect('This node processes the input data and applies transformations.', AspectState.AUTOGEN),
-        new CodeAspect('start(3)', AspectState.AUTOGEN),
-        '// TODO: Add example code here for function 3'
-      )
-    ]
-  };
 };

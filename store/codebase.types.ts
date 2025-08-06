@@ -87,13 +87,15 @@ export interface CodebaseState {
   // Core data model
   projectName: string;
   codeFunctions: CodeFunction[];
+  nodePositions: { [functionIndex: number]: { x: number; y: number } }; // Store positions for each function
   
   // Core actions
   updateProjectName: (name: string) => void;
-  addCodeFunction: () => void;
+  addCodeFunction: (position: { x: number; y: number }) => void;
   updateCodeFunction: (index: number, func: Partial<CodeFunction>) => void;
   removeCodeFunction: (index: number) => void;
   loadProjectFromFile: () => Promise<void>;
+  setNodePosition: (index: number, position: { x: number; y: number }) => void;
 
   // React Flow state
   nodes: Node<FlowNodeData>[];

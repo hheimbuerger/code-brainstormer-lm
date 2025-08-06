@@ -3,11 +3,13 @@
 import { memo, useState, useRef, useEffect, JSX, useCallback } from 'react';
 
 import { useMutation } from '@tanstack/react-query';
-import { Handle, Position, useUpdateNodeInternals } from 'reactflow';
+import { Handle, Position, useUpdateNodeInternals, useReactFlow } from 'reactflow';
 import type { NodeProps } from 'reactflow';
 import { useCodebaseStore } from '@/store/useCodebaseStore';
 import { CodeAspect, AspectState, CodeAspectType, CodeFunction } from '@/store/codebase.types';
 import { applyCodegenCommands, invokeCodegenForFunction, calculateAspectsToGenerate } from '@/features/codegen/codegenFrontend';
+import { findOptimalNodePlacement } from '@/utils/nodePlacement';
+
 import './FunctionNode.css';
 
 // Animated spinner donut component
@@ -37,6 +39,7 @@ type EditableFieldProps = {
   isItalic?: boolean;
   isBold?: boolean;
   isProcessing?: boolean;
+  autoFocus?: boolean;
 };
 
 const EditableField = ({
@@ -47,6 +50,7 @@ const EditableField = ({
   isItalic = false,
   isBold = false,
   isProcessing = false,
+  autoFocus = false,
   nodeId,
   fieldName,
   methodIndex,
@@ -64,6 +68,13 @@ const EditableField = ({
     setInputValue(value);
   }, [value]);
 
+  // Auto-focus functionality - enter edit mode if autoFocus is true
+  useEffect(() => {
+    if (autoFocus && !isEditing) {
+      setIsEditing(true);
+    }
+  }, [autoFocus, isEditing]);
+
   // Auto-resize textarea to fit content
   const autoResize = useCallback(() => {
     if (inputRef.current) {
@@ -76,12 +87,17 @@ const EditableField = ({
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      // Move cursor to end of text
-      const length = inputRef.current.value.length;
-      inputRef.current.setSelectionRange(length, length);
-      // Auto-resize when opening the field
-      autoResize();
+      // Small delay to ensure the textarea is fully rendered and ready for focus
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          // Move cursor to end of text
+          const length = inputRef.current.value.length;
+          inputRef.current.setSelectionRange(length, length);
+          // Auto-resize when opening the field
+          autoResize();
+        }
+      }, 100);
     }
   }, [isEditing, autoResize]);
 
@@ -162,11 +178,11 @@ const EditableField = ({
   );
 };
 
-// CustomNodeData is now imported from useNodesStore.ts
-
 // Custom node data type that matches what we store in React Flow nodes
-type FunctionNodeData = {
+interface FunctionNodeData {
   methodIndex: number;
+  autoFocusIdentifier?: boolean;
+  onSetAutoFocus?: (nodeIndex: number, shouldAutoFocus?: boolean) => void;
 };
 
 type FunctionNodeProps = NodeProps<FunctionNodeData>;
@@ -175,9 +191,10 @@ function FunctionNode(props: FunctionNodeProps) {
   const { id: nodeId, data, selected } = props;
   const { methodIndex } = data;
   const updateNodeInternals = useUpdateNodeInternals();
-
+  const { setViewport, getViewport, screenToFlowPosition } = useReactFlow();
+  
   // Get store data first
-  const { codeFunctions, updateCodeFunction } = useCodebaseStore();
+  const { codeFunctions, updateCodeFunction, addCodeFunction, nodePositions } = useCodebaseStore();
   
   // Select only the required slice so the node re-renders whenever this function changes
   const method = methodIndex !== undefined ? codeFunctions[methodIndex] : undefined;
@@ -317,17 +334,14 @@ function FunctionNode(props: FunctionNodeProps) {
 
   /**
    * Parse a method implementation string and return an array of JSX elements
-   * where each detected function call is wrapped in a <span> that contains a
-   * React-Flow <Handle>.
-   *
-   * The function also guarantees stable handle IDs and matching edge classes
-   * by maintaining a local `fnCounts` map so repeated calls to the same
-   * function are indexed deterministically.
+   * where each detected function call is wrapped in a <span>.
+   * 
+   * For existing functions: shows a handle for edge connection and allows double-click to center viewport
+   * For non-existent functions: shows an asterisk indicator and allows double-click to create the function
    *
    * Example conversion:
-   *   "return formatText(str) + sum(a,b);"  →
-   *   ["return ", <span key=…>formatText<Handle id="formatText-0" …/></span>,
-   *    " + ", <span key=…>sum<Handle id="sum-0" …/></span>, ";"]
+   *   "return formatText(str) + newFunc(a,b);"  →
+   *   ["return ", <span>formatText<Handle/></span>, " + ", <span>newFunc*</span>, ";"]
    */
   const renderImplementation = (impl: string) => {
     // maintain per-function counters so indices stay consistent with edge generation
@@ -337,54 +351,198 @@ function FunctionNode(props: FunctionNodeProps) {
     let lastIndex = 0;
     let match: RegExpExecArray | null;
     let idx = 0;
+    
     while ((match = regex.exec(impl)) !== null) {
       const matchIndex = match.index;
       if (matchIndex > lastIndex) {
         parts.push(<span key={`text-${idx}`}>{impl.slice(lastIndex, matchIndex)}</span>);
       }
+      
       const fnCall = match[0];
       const fnName = fnCall.split('(')[0];
       const localIndex = fnCounts[fnName] ?? 0;
       fnCounts[fnName] = localIndex + 1;
-      parts.push(
-        <span
-          key={`call-${idx}`}
-          className="inline-fn-call"
-          onMouseEnter={() => handleMouseEnter(`${fnName}-${methodIndex}-${localIndex}`)}
-          onMouseLeave={handleMouseLeave}
-        >
-          {fnCall}
-          <Handle
-            type="source"
-            position={Position.Right}
-            id={`${fnName}-${methodIndex}-${localIndex}`}
-            data-fn-name={fnName}
-            data-handle-id={`${fnName}-${methodIndex}-${localIndex}`}
-            className="inline-fn-handle"
-            style={{
-              width: 8,
-              height: 8,
-              transition: 'transform 0.1s ease',
-              zIndex: 10
-            }}
-            isConnectable={false}
+      
+      // Check if this function exists in the codebase
+      const targetFunctionExists = codeFunctions.some((f: any) => 
+        f.identifier?.descriptor?.startsWith(fnName)
+      );
+      
+      if (targetFunctionExists) {
+        // Existing function: show handle for edge connection
+        parts.push(
+          <span
+            key={`call-${idx}`}
+            className="inline-fn-call existing-function"
             onMouseEnter={() => handleMouseEnter(`${fnName}-${methodIndex}-${localIndex}`)}
             onMouseLeave={handleMouseLeave}
-          />
-        </span>
-      );
+            onDoubleClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              // Find the target function index by name
+              const targetFunctionIndex = codeFunctions.findIndex((f: any) => 
+                f.identifier?.descriptor?.startsWith(fnName)
+              );
+              if (targetFunctionIndex !== -1) {
+                // Center viewport on existing function using stored position
+                console.log(`Centering on function: ${fnName} at index ${targetFunctionIndex}`);
+                
+                // Get the target node position from store (not DOM)
+                const targetPosition = nodePositions[targetFunctionIndex];
+                if (targetPosition) {
+                  // Get current viewport to preserve zoom level
+                  const currentViewport = getViewport();
+                  
+                  // Calculate center position (node position + half node size)
+                  const nodeCenterX = targetPosition.x + 140; // half of 280px width
+                  const nodeCenterY = targetPosition.y + 100; // half of 200px height
+                  
+                  // Get container dimensions
+                  const container = document.querySelector('.react-flow');
+                  if (container) {
+                    const containerRect = container.getBoundingClientRect();
+                    const containerCenterX = containerRect.width / 2;
+                    const containerCenterY = containerRect.height / 2;
+                    
+                    // Calculate new viewport position to center the node
+                    const newX = containerCenterX - nodeCenterX * currentViewport.zoom;
+                    const newY = containerCenterY - nodeCenterY * currentViewport.zoom;
+                    
+                    // Center the viewport with smooth animation while preserving zoom
+                    setViewport(
+                      { x: newX, y: newY, zoom: currentViewport.zoom },
+                      { duration: 800 } // Smooth animation
+                    );
+                  }
+                }
+              }
+            }}
+            title="Double-click to center on this function"
+          >
+            {fnCall}
+            <Handle
+              type="source"
+              position={Position.Right}
+              id={`${fnName}-${methodIndex}-${localIndex}`}
+              data-fn-name={fnName}
+              data-handle-id={`${fnName}-${methodIndex}-${localIndex}`}
+              className="inline-fn-handle"
+              style={{
+                width: 8,
+                height: 8,
+                transition: 'transform 0.1s ease',
+                zIndex: 10
+              }}
+              isConnectable={false}
+              onMouseEnter={() => handleMouseEnter(`${fnName}-${methodIndex}-${localIndex}`)}
+              onMouseLeave={handleMouseLeave}
+            />
+          </span>
+        );
+      } else {
+        // Non-existent function: show asterisk indicator
+        parts.push(
+          <span
+            key={`call-${idx}`}
+            className="inline-fn-call new-function"
+            onDoubleClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              
+              // Get click position in React Flow coordinates (accounting for zoom and pan)
+              const clickPosition = screenToFlowPosition({
+                x: e.clientX,
+                y: e.clientY,
+              });
+              
+              // Create existing nodes array for collision detection
+              const existingNodes = codeFunctions.map((_, index) => ({
+                id: `method-${index}`,
+                position: nodePositions[index],
+                width: 200, // Use actual node width from placement algorithm
+                height: 120, // Use actual node height from placement algorithm
+                data: { methodIndex: index },
+                type: 'method' as const,
+              }));
+              
+              // Find optimal placement near click position
+              const optimalPosition = findOptimalNodePlacement(clickPosition, existingNodes);
+              
+              // Create new function
+              const newFunction = new CodeFunction(
+                new CodeAspect(fnName, AspectState.EDITED),
+                new CodeAspect('', AspectState.UNSET),
+                new CodeAspect('', AspectState.UNSET),
+                new CodeAspect('', AspectState.UNSET),
+                ''
+              );
+              
+              // Add to store with calculated position
+              addCodeFunction(optimalPosition);
+              const newIndex = codeFunctions.length;
+              updateCodeFunction(newIndex, newFunction);
+              
+              // Don't auto-focus for named nodes (identifier already filled)
+              if (data.onSetAutoFocus) {
+                data.onSetAutoFocus(newIndex, false);
+              }
+              
+              // Navigate to the newly created node with smooth animation
+              setTimeout(() => {
+                const nodeCenterX = optimalPosition.x + 100; // half of 200px width
+                const nodeCenterY = optimalPosition.y + 60; // half of 120px height
+                
+                const container = document.querySelector('.react-flow');
+                if (container) {
+                  const containerRect = container.getBoundingClientRect();
+                  const containerCenterX = containerRect.width / 2;
+                  const containerCenterY = containerRect.height / 2;
+                  
+                  // Get current viewport to preserve zoom
+                  const currentViewport = getViewport();
+                  
+                  // Calculate new viewport position to center the node
+                  const newX = containerCenterX - nodeCenterX * currentViewport.zoom;
+                  const newY = containerCenterY - nodeCenterY * currentViewport.zoom;
+                  
+                  // Animate to the new node
+                  setViewport(
+                    { x: newX, y: newY, zoom: currentViewport.zoom },
+                    { duration: 800 }
+                  );
+                }
+              }, 100); // Small delay to ensure node is rendered
+              
+              console.log(`Created new function: ${fnName} at position`, optimalPosition);
+            }}
+            title="Double-click to create this function"
+          >
+            {fnCall}
+            <span className="new-function-indicator">*</span>
+          </span>
+        );
+      }
+      
       lastIndex = matchIndex + fnCall.length;
       idx += 1;
     }
+    
     if (lastIndex < impl.length) {
       parts.push(<span key={`text-${idx}`}>{impl.slice(lastIndex)}</span>);
     }
+    
     return parts;
   };
 
   const handleNodeClick = (e: React.MouseEvent) => {
+    // Don't interfere with double-click events on function references
+    const target = e.target as HTMLElement;
+    if (target.closest('.inline-fn-call')) {
+      return; // Let function reference clicks through
+    }
+    
     // Prevent node selection when clicking on non-header areas
-    if (!(e.target as HTMLElement).closest('.method-node__header')) {
+    if (!target.closest('.method-node__header')) {
       e.stopPropagation();
     }
   };
@@ -411,6 +569,7 @@ function FunctionNode(props: FunctionNodeProps) {
           fieldName="identifier"
           methodIndex={methodIndex}
           isProcessing={isFieldProcessing('identifier')}
+          autoFocus={data.autoFocusIdentifier || false}
         />
         <span className="field-state-icon" onClick={(e)=>{e.stopPropagation(); toggleAspectState('identifier');}}>
           {isFieldProcessing('identifier') ? <SpinnerDonut /> : getIconForState(method?.identifier?.state)}
