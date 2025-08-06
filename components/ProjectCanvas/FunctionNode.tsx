@@ -195,7 +195,7 @@ function FunctionNode(props: FunctionNodeProps) {
   const { setViewport, getViewport, screenToFlowPosition } = useReactFlow();
   
   // Get store data first
-  const { codeFunctions, updateCodeFunction, addCodeFunction, nodePositions } = useCodebaseStore();
+  const { codeFunctions, updateCodeFunction, addCodeFunction, removeCodeFunction, nodePositions } = useCodebaseStore();
   
   // Select only the required slice so the node re-renders whenever this function changes
   const method = methodIndex !== undefined ? codeFunctions[methodIndex] : undefined;
@@ -276,6 +276,12 @@ function FunctionNode(props: FunctionNodeProps) {
       oldValue,
       newValue,
     });
+  };
+
+  // Helper function to delete this function from the codebase
+  const handleDeleteFunction = () => {
+    if (methodIndex === undefined) return;
+    removeCodeFunction(methodIndex);
   };
 
   const handleAspectChange = (aspect: 'identifier' | 'signature' | 'specification' | 'implementation', value: string, oldValue: string) => {
@@ -621,8 +627,8 @@ function FunctionNode(props: FunctionNodeProps) {
           isProcessing={isFieldProcessing('identifier')}
           autoFocus={data.autoFocusIdentifier || false}
         />
-        <span className="field-state-icon" onClick={(e)=>{e.stopPropagation(); toggleAspectState('identifier');}}>
-          {isFieldProcessing('identifier') ? <SpinnerDonut /> : getIconForState(method?.identifier?.state)}
+        <span className="delete-button" onClick={(e)=>{e.stopPropagation(); handleDeleteFunction();}}>
+          ×
         </span>
       </div>
 
