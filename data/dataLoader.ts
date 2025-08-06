@@ -11,6 +11,7 @@ import {
 } from './projectSchema';
 import { Node, Edge } from 'reactflow';
 import { findOptimalNodePlacement } from '../utils/nodePlacement';
+import { NODE_WIDTH, calculateNodeHeight } from '../constants/nodeConstants';
 
 // Convert ProjectFunction to CodeFunction
 const projectFunctionToCodeFunction = (func: ProjectFunction): CodeFunction => {
@@ -98,8 +99,8 @@ export const loadProjectData = async (jsonPath: string): Promise<{
           position: optimalPosition,
           selected: false,
           dragging: false,
-          width: 280,
-          height: 200
+          width: NODE_WIDTH,
+          height: calculateNodeHeight(func) // Use actual calculated height
         };
       }
       

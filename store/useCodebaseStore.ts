@@ -123,19 +123,20 @@ export const useCodebaseStore = create<CodebaseState>()(
         } else {
           // For sample data without nodes, use placement algorithm to generate positions
           const { findOptimalNodePlacement } = await import('../utils/nodePlacement');
+          const { calculateNodeHeight, NODE_WIDTH } = await import('../constants/nodeConstants');
           const existingNodes: any[] = [];
           
-          projectData.codeFunctions.forEach((_, index) => {
+          projectData.codeFunctions.forEach((func, index) => {
             const startPosition = { x: 100, y: 100 };
             const optimalPosition = findOptimalNodePlacement(startPosition, existingNodes);
             nodePositions[index] = optimalPosition;
             
-            // Add to existing nodes for next placement calculation
+            // Add to existing nodes for next placement calculation with CORRECT dimensions
             existingNodes.push({
               id: `method-${index}`,
               position: optimalPosition,
-              width: 280,
-              height: 200,
+              width: NODE_WIDTH,
+              height: calculateNodeHeight(func), // Use actual calculated height
               data: { methodIndex: index },
               type: 'method' as const,
             });

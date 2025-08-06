@@ -9,6 +9,7 @@ import { useCodebaseStore } from '@/store/useCodebaseStore';
 import { CodeAspect, AspectState, CodeAspectType, CodeFunction } from '@/store/codebase.types';
 import { applyCodegenCommands, invokeCodegenForFunction, calculateAspectsToGenerate } from '@/features/codegen/codegenFrontend';
 import { findOptimalNodePlacement } from '@/utils/nodePlacement';
+import { NODE_WIDTH, NODE_MIN_HEIGHT, calculateNodeHeight } from '@/constants/nodeConstants';
 
 import './FunctionNode.css';
 
@@ -254,6 +255,29 @@ function FunctionNode(props: FunctionNodeProps) {
     updateCodeFunction(methodIndex, { [aspectKey]: newAspect } as Partial<CodeFunction>);
   };
 
+  // Helper function to trigger codegen for this function's aspect
+  const triggerCodegenForFunction = (field: string, oldValue: string, newValue: string) => {
+    if (methodIndex === undefined || !method) {
+      console.warn('Cannot trigger codegen: method or methodIndex is undefined');
+      return;
+    }
+
+    // Calculate which aspects will be generated
+    const aspectsToGenerate = calculateAspectsToGenerate(field as CodeAspectType, method);
+    
+    // Set processing fields for UI feedback
+    console.log('Setting processing fields:', aspectsToGenerate, 'for method:', methodIndex);
+    setProcessingFields(aspectsToGenerate);
+    
+    // Use the React Query mutation instead of calling invokeCodegenForFunction directly
+    codegenMutation.mutate({
+      methodIndex,
+      field,
+      oldValue,
+      newValue,
+    });
+  };
+
   const handleAspectChange = (aspect: 'identifier' | 'signature' | 'specification' | 'implementation', value: string, oldValue: string) => {
     if (methodIndex === undefined || !method) return;
 
@@ -284,12 +308,7 @@ function FunctionNode(props: FunctionNodeProps) {
 
     // Trigger codegen if the value actually changed
     if (value !== oldValue) {
-      codegenMutation.mutate({
-        methodIndex,
-        field: aspect,
-        oldValue,
-        newValue: value,
-      });
+      triggerCodegenForFunction(aspect, oldValue, value);
     }
   };
 
@@ -297,6 +316,29 @@ function FunctionNode(props: FunctionNodeProps) {
   useEffect(() => {
     updateNodeInternals(nodeId);
   }, [nodeId, method?.implementation?.descriptor, updateNodeInternals]);
+
+  // Check if this is a newly created function that needs codegen (identifier state is AUTOGEN)
+  const hasTriggeredCodegen = useRef(false);
+  
+  useEffect(() => {
+    if (method && methodIndex !== undefined && 
+        method.identifier.state === AspectState.AUTOGEN && 
+        method.identifier.descriptor.trim() !== '' && // Only trigger for non-empty identifiers
+        !hasTriggeredCodegen.current) {
+      
+      console.log('🚀 Auto-triggering codegen for newly created function:', method.identifier.descriptor);
+      hasTriggeredCodegen.current = true;
+      
+      // Use the existing React Query mutation system instead of the helper
+      // This should properly set up UI state and processing fields
+      codegenMutation.mutate({
+        methodIndex,
+        field: 'identifier',
+        oldValue: '',
+        newValue: method.identifier.descriptor,
+      });
+    }
+  }, [method, methodIndex, codegenMutation]);
 
   // Ref to track previously highlighted edge group
   const prevHighlightedRef = useRef<SVGGElement | null>(null);
@@ -456,11 +498,11 @@ function FunctionNode(props: FunctionNodeProps) {
               });
               
               // Create existing nodes array for collision detection
-              const existingNodes = codeFunctions.map((_, index) => ({
+              const existingNodes = codeFunctions.map((func, index) => ({
                 id: `method-${index}`,
                 position: nodePositions[index],
-                width: 200, // Use actual node width from placement algorithm
-                height: 120, // Use actual node height from placement algorithm
+                width: NODE_WIDTH,
+                height: calculateNodeHeight(func), // Use actual calculated height based on content
                 data: { methodIndex: index },
                 type: 'method' as const,
               }));
@@ -486,6 +528,14 @@ function FunctionNode(props: FunctionNodeProps) {
               if (data.onSetAutoFocus) {
                 data.onSetAutoFocus(newIndex, false);
               }
+              
+              // Update the function with the identifier set to AUTOGEN state
+              // This signals to the new function node that it should trigger codegen on mount
+              const updatedFunction = {
+                ...newFunction,
+                identifier: new CodeAspect(fnName, AspectState.AUTOGEN)
+              };
+              updateCodeFunction(newIndex, updatedFunction);
               
               // Navigate to the newly created node with smooth animation
               setTimeout(() => {

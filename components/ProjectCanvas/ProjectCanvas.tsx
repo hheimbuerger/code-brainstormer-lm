@@ -18,6 +18,7 @@ import 'reactflow/dist/style.css';
 import FunctionNode from './FunctionNode';
 import { useCodebaseStore } from '../../store/useCodebaseStore';
 import { findOptimalNodePlacement, centerViewportOnNode } from '../../utils/nodePlacement';
+import { NODE_WIDTH, NODE_MIN_HEIGHT, calculateNodeHeight } from '../../constants/nodeConstants';
 import { CodeFunction, CodeAspect, AspectState } from '../../store/codebase.types';
 import './ProjectCanvas.css';
 
@@ -153,8 +154,8 @@ export default function ProjectCanvas() {
     }
   }, []);
 
-  // Create nodes directly from codeFunctions using stored positions
-  const nodes: Node[] = useMemo(() => {
+  // Create initial nodes from codeFunctions using stored positions
+  const initialNodes: Node[] = useMemo(() => {
     return codeFunctions.map((func, index) => ({
       id: `method-${index}`,
       type: 'method',
@@ -167,66 +168,7 @@ export default function ProjectCanvas() {
     }));
   }, [codeFunctions, nodePositions, newlyCreatedNodeIndex]);
 
-  const [, setNodes, onNodesChange] = useNodesState(nodes);
-
-  // Handler for creating a new function when double-clicking on a non-existent reference
-  const handleCreateNewFunction = useCallback((functionName: string) => {
-    // Get current viewport center for placement
-    const { getViewport } = useReactFlow();
-    const viewport = getViewport();
-    const viewportCenter = {
-      x: -viewport.x + window.innerWidth / 2,
-      y: -viewport.y + window.innerHeight / 2,
-    };
-    
-    // Create existing nodes array for collision detection
-    const existingNodes = codeFunctions.map((_, index) => ({
-      id: `method-${index}`,
-      position: nodePositions[index],
-      width: 280,
-      height: 200,
-      data: { methodIndex: index },
-      type: 'method' as const,
-    }));
-    
-    // Find optimal placement near viewport center
-    const optimalPosition = findOptimalNodePlacement(viewportCenter, existingNodes);
-    
-    // Create new function with the specified name
-    const newFunction = new CodeFunction(
-      new CodeAspect(functionName, AspectState.EDITED),
-      new CodeAspect('', AspectState.UNSET),
-      new CodeAspect('', AspectState.UNSET),
-      new CodeAspect('', AspectState.UNSET),
-      ''
-    );
-
-    // Add to store with calculated position
-    addCodeFunction(optimalPosition);
-    const newIndex = codeFunctions.length;
-    updateCodeFunction(newIndex, newFunction);
-
-    console.log(`Created new function: ${functionName} at position`, optimalPosition);
-  }, [codeFunctions, nodePositions, addCodeFunction, updateCodeFunction]);
-
-  // Handler for centering viewport on an existing function
-  const handleCenterOnFunction = useCallback((targetFunctionIndex: number) => {
-    if (targetFunctionIndex !== -1) {
-      const targetNode = nodes.find((node: Node) => node.id === `method-${targetFunctionIndex}`);
-      if (targetNode) {
-        // Use React Flow's viewport centering
-        centerViewportOnNode(
-          targetNode.position,
-          { width: 280, height: 200 }, // Default node size
-          setViewport,
-          1 // Current zoom level
-        );
-        console.log(`Centered viewport on function: ${targetFunctionIndex}`);
-      }
-    } else {
-      console.log(`Function not found: ${targetFunctionIndex}`);
-    }
-  }, [codeFunctions, nodes]);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
 
   // Handler for double-clicking on empty canvas to create new node
   const handleCanvasDoubleClick = useCallback((event: React.MouseEvent) => {
@@ -242,12 +184,12 @@ export default function ProjectCanvas() {
       y: event.clientY,
     });
     
-    // Create existing nodes array for collision detection
-    const existingNodes = codeFunctions.map((_, index) => ({
+    // Create existing nodes array for collision detection with actual heights
+    const existingNodes = codeFunctions.map((func, index) => ({
       id: `method-${index}`,
       position: nodePositions[index],
-      width: 280,
-      height: 200,
+      width: NODE_WIDTH,
+      height: calculateNodeHeight(func), // Use actual calculated height based on content
       data: { methodIndex: index },
       type: 'method' as const,
     }));
@@ -301,10 +243,10 @@ export default function ProjectCanvas() {
     console.log(`Created new empty function at position`, optimalPosition);
   }, [codeFunctions, nodePositions, addCodeFunction, updateCodeFunction]);
 
-  // Update React Flow nodes when codeFunctions change
+  // Update React Flow nodes when codeFunctions or nodePositions change (but not during dragging)
   useEffect(() => {
-    setNodes(nodes);
-  }, [nodes, setNodes]);
+    setNodes(initialNodes);
+  }, [initialNodes, setNodes]);
 
     const [edges, setEdges] = useState<Edge[]>(() => buildEdges([], codeFunctions));
 
@@ -350,20 +292,36 @@ export default function ProjectCanvas() {
             edgeTypes={edgeTypes}
             onNodesChange={onNodesChange}
             fitView
+            fitViewOptions={{
+              padding: 0.2,
+              minZoom: 1.5,
+              maxZoom: 1.5
+            }}
             nodesDraggable
             nodeDragThreshold={1}
             zoomOnDoubleClick={false}
+            onNodeDrag={(e, dragged) => {
+              // Real-time update during dragging for smooth UI feedback
+              setNodes((nds) => nds.map((n) => (n.id === dragged.id ? dragged : n)));
+              
+              // Optionally rebuild edges in real-time (may impact performance)
+              // Uncomment the next 3 lines if you want edges to update during drag
+              // setEdges(buildEdges(
+              //   nodes.map((n) => (n.id === dragged.id ? dragged : n)),
+              //   codeFunctions,
+              // ));
+            }}
             onNodeDragStop={(e, dragged) => {
               // Extract the method index from the node ID
               const methodIndex = parseInt(dragged.id.replace('method-', ''), 10);
               
-              // Update the store's nodePositions
+              // Update the store's nodePositions (final persistence)
               setNodePosition(methodIndex, dragged.position);
               
-              // Update React Flow nodes state
+              // Ensure React Flow nodes state is updated
               setNodes((nds) => nds.map((n) => (n.id === dragged.id ? dragged : n)));
               
-              // Rebuild edges with updated positions
+              // Rebuild edges with final positions
               setEdges(buildEdges(
                 nodes.map((n) => (n.id === dragged.id ? dragged : n)),
                 codeFunctions,
