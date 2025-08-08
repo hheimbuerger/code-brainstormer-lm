@@ -91,6 +91,12 @@ function buildEdges(nodes: Node[], codeFunctions: any[]): Edge[] {
 
 export default function ProjectCanvas() {
   const { projectName, updateProjectName, codeFunctions, nodePositions, addCodeFunction, updateCodeFunction, setNodePosition, loadProjectFromFile } = useCodebaseStore();
+  const temporal = (useCodebaseStore as any).temporal as { getState: () => any; subscribe: (fn: (s: any) => void) => () => void; undo: () => void; redo: () => void };
+  if (process.env.NODE_ENV !== 'production') {
+    // Log once per render to verify temporal is present
+    // eslint-disable-next-line no-console
+    console.debug('[Undo/Redo] temporal attached?', !!temporal, temporal?.getState?.());
+  }
   const [isEditingProjectName, setIsEditingProjectName] = useState(false);
   const [editValue, setEditValue] = useState(projectName);
   const [newlyCreatedNodeIndex, setNewlyCreatedNodeIndex] = useState<number | null>(null);
@@ -101,6 +107,76 @@ export default function ProjectCanvas() {
   useEffect(() => {
     loadProjectFromFile();
   }, [loadProjectFromFile]);
+
+  // Track canUndo/canRedo from zundo temporal store
+  const [canUndo, setCanUndo] = useState<boolean>(() => {
+    const s = temporal?.getState?.();
+    const v = (s?.pastStates?.length ?? 0) > 0;
+    if (process.env.NODE_ENV !== 'production') console.debug('[Undo/Redo] init canUndo', v, s?.pastStates?.length);
+    return v;
+  });
+  const [canRedo, setCanRedo] = useState<boolean>(() => {
+    const s = temporal?.getState?.();
+    const v = (s?.futureStates?.length ?? 0) > 0;
+    if (process.env.NODE_ENV !== 'production') console.debug('[Undo/Redo] init canRedo', v, s?.futureStates?.length);
+    return v;
+  });
+
+  useEffect(() => {
+    let unsubs: Array<() => void> = [];
+    if (temporal && typeof temporal.subscribe === 'function') {
+      const unsubTemporal = temporal.subscribe((s: any) => {
+        const cu = (s?.pastStates?.length ?? 0) > 0;
+        const cr = (s?.futureStates?.length ?? 0) > 0;
+        if (process.env.NODE_ENV !== 'production') console.debug('[Undo/Redo] temporal update', { past: s?.pastStates?.length, future: s?.futureStates?.length, canUndo: cu, canRedo: cr });
+        setCanUndo(cu);
+        setCanRedo(cr);
+      });
+      unsubs.push(unsubTemporal);
+    }
+    // Fallback: subscribe to main store changes and recompute from temporal.getState()
+    const unsubStore = (useCodebaseStore as any).subscribe?.(() => {
+      const ts = temporal?.getState?.();
+      const cu = (ts?.pastStates?.length ?? 0) > 0;
+      const cr = (ts?.futureStates?.length ?? 0) > 0;
+      if (process.env.NODE_ENV !== 'production') console.debug('[Undo/Redo] store update', { past: ts?.pastStates?.length, future: ts?.futureStates?.length, canUndo: cu, canRedo: cr });
+      setCanUndo(cu);
+      setCanRedo(cr);
+    });
+    if (unsubStore) unsubs.push(unsubStore);
+    return () => {
+      unsubs.forEach((u) => {
+        try { u && u(); } catch {}
+      });
+    };
+  }, [temporal]);
+
+  // Keyboard shortcuts: Ctrl+Z / Ctrl+Y for undo/redo
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Avoid interfering while typing in inputs/textareas
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      const isTyping = tag === 'input' || tag === 'textarea' || target?.isContentEditable;
+      if (isTyping) return;
+
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (canUndo) {
+          if (process.env.NODE_ENV !== 'production') console.debug('[Undo/Redo] KB: undo');
+          temporal?.getState?.().undo?.();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
+        e.preventDefault();
+        if (canRedo) {
+          if (process.env.NODE_ENV !== 'production') console.debug('[Undo/Redo] KB: redo');
+          temporal?.getState?.().redo?.();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [temporal, canUndo, canRedo]);
 
   // Sync editValue when projectName changes from store
   useEffect(() => {
@@ -334,7 +410,32 @@ export default function ProjectCanvas() {
             }}
           >
             <Background />
-            <Controls />
+            <Controls position="bottom-left">
+              <button
+                className="react-flow__controls-button"
+                title={canUndo ? 'Undo (Ctrl+Z)' : 'Undo'}
+                onClick={() => {
+                  if (process.env.NODE_ENV !== 'production') console.debug('[Undo/Redo] BTN: undo');
+                  temporal?.getState?.().undo?.();
+                }}
+                disabled={!canUndo}
+                aria-label="Undo"
+              >
+                ⤺
+              </button>
+              <button
+                className="react-flow__controls-button"
+                title={canRedo ? 'Redo (Ctrl+Y)' : 'Redo'}
+                onClick={() => {
+                  if (process.env.NODE_ENV !== 'production') console.debug('[Undo/Redo] BTN: redo');
+                  temporal?.getState?.().redo?.();
+                }}
+                disabled={!canRedo}
+                aria-label="Redo"
+              >
+                ⤻
+              </button>
+            </Controls>
             {/* <Panel position="top-right" className="react-flow__panel">
               <div style={{ fontSize: '12px' }}>Drag nodes by their header</div>
             </Panel> */}

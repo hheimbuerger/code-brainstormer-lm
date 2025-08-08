@@ -97,6 +97,12 @@ export interface CodebaseState {
   loadProjectFromFile: () => Promise<void>;
   setNodePosition: (index: number, position: { x: number; y: number }) => void;
 
+  // Undo/Redo history (snapshot-based)
+  canUndo: boolean;
+  canRedo: boolean;
+  undo: () => void;
+  redo: () => void;
+
   // React Flow state
   nodes: Node<FlowNodeData>[];
   edges: Edge[];
