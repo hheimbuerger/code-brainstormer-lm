@@ -45,15 +45,15 @@ export function findOptimalNodePlacement(
 ): { x: number; y: number } {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   
-  console.log('🎯 Node Placement Algorithm Started');
-  console.log('📍 Target Position:', targetPosition);
-  console.log('⚙️ Options:', opts);
-  console.log('🏗️ Existing Nodes:', existingNodes.length, 'nodes');
+  // console.log('🎯 Node Placement Algorithm Started');
+  // console.log('📍 Target Position:', targetPosition);
+  // console.log('⚙️ Options:', opts);
+  // console.log('🏗️ Existing Nodes:', existingNodes.length, 'nodes');
   
   // Log existing node positions for debugging
-  existingNodes.forEach((node, i) => {
-    console.log(`   Node ${i}: ${node.id} at (${node.position.x}, ${node.position.y}) size: ${node.width || opts.nodeWidth}x${node.height || opts.nodeHeight}`);
-  });
+  // existingNodes.forEach((node, i) => {
+  //   console.log(`   Node ${i}: ${node.id} at (${node.position.x}, ${node.position.y}) size: ${node.width || opts.nodeWidth}x${node.height || opts.nodeHeight}`);
+  // });
   
   // Helper function to check if a position collides with existing nodes
   const hasCollision = (x: number, y: number, logDetails = false): boolean => {
@@ -65,9 +65,9 @@ export function findOptimalNodePlacement(
       bottom: y + opts.nodeHeight,
     };
     
-    if (logDetails) {
-      console.log(`🔍 Testing position (${x}, ${y}) - Test rect:`, testRect);
-    }
+    // if (logDetails) {
+    //   console.log(`🔍 Testing position (${x}, ${y}) - Test rect:`, testRect);
+    // }
     
     const collision = existingNodes.some((node, i) => {
       // Existing node rectangle with margin padding
@@ -85,18 +85,18 @@ export function findOptimalNodePlacement(
         testRect.top > nodeRect.bottom
       );
       
-      if (logDetails && hasOverlap) {
-        console.log(`   ❌ Collision with Node ${i} (${node.id}):`);
-        console.log(`      Node rect (with margin):`, nodeRect);
-        console.log(`      Overlap detected`);
-      }
+      // if (logDetails && hasOverlap) {
+      //   console.log(`   ❌ Collision with Node ${i} (${node.id}):`);
+      //   console.log(`      Node rect (with margin):`, nodeRect);
+      //   console.log(`      Overlap detected`);
+      // }
       
       return hasOverlap;
     });
     
-    if (logDetails) {
-      console.log(`   ${collision ? '❌ COLLISION' : '✅ FREE'} at (${x}, ${y})`);
-    }
+    // if (logDetails) {
+    //   console.log(`   ${collision ? '❌ COLLISION' : '✅ FREE'} at (${x}, ${y})`);
+    // }
     
     return collision;
   };
@@ -114,23 +114,23 @@ export function findOptimalNodePlacement(
     targetPosition.y - opts.nodeHeight / 2
   );
   
-  console.log('📐 Start position (target centered, snapped to grid):', startPos);
+  // console.log('📐 Start position (target centered, snapped to grid):', startPos);
   
   // Check if the center position is free
-  console.log('🎯 Testing center position first...');
+  // console.log('🎯 Testing center position first...');
   if (!hasCollision(startPos.x, startPos.y, true)) {
-    console.log('✅ CENTER POSITION IS FREE! Using:', startPos);
+    // console.log('✅ CENTER POSITION IS FREE! Using:', startPos);
     return startPos;
   }
   
-  console.log('❌ Center position occupied, starting grid search...');
+  // console.log('❌ Center position occupied, starting grid search...');
   
   // Generate all nearby grid positions and sort by distance (much simpler and more effective)
   const positions: { x: number; y: number; distance: number }[] = [];
   const step = opts.gridSize;
   const maxDistance = opts.searchRadius;
   
-  console.log(`🔍 Generating grid positions within radius ${maxDistance}px, step ${step}px...`);
+  // console.log(`🔍 Generating grid positions within radius ${maxDistance}px, step ${step}px...`);
   
   // Generate all grid positions within search radius
   for (let dx = -maxDistance; dx <= maxDistance; dx += step) {
@@ -147,12 +147,12 @@ export function findOptimalNodePlacement(
     }
   }
   
-  console.log(`📊 Generated ${positions.length} candidate positions`);
+  // console.log(`📊 Generated ${positions.length} candidate positions`);
   
   // Sort all positions by distance from center (closest first)
   positions.sort((a, b) => a.distance - b.distance);
   
-  console.log('🔄 Testing positions in order of distance from center...');
+  // console.log('🔄 Testing positions in order of distance from center...');
   
   // Test each position in order of distance
   for (let i = 0; i < positions.length; i++) {
@@ -161,17 +161,17 @@ export function findOptimalNodePlacement(
     const isEvery10th = i % 10 === 0;
     const logDetails = isFirst || isEvery10th || i < 5; // Log first few and every 10th
     
-    if (logDetails) {
-      console.log(`🧪 Testing position ${i + 1}/${positions.length}: (${pos.x}, ${pos.y}) distance: ${pos.distance.toFixed(1)}px`);
-    }
+    // if (logDetails) {
+    //   console.log(`🧪 Testing position ${i + 1}/${positions.length}: (${pos.x}, ${pos.y}) distance: ${pos.distance.toFixed(1)}px`);
+    // }
     
     if (!hasCollision(pos.x, pos.y, logDetails)) {
-      console.log(`🎉 FOUND FREE POSITION at attempt ${i + 1}: (${pos.x}, ${pos.y}) distance: ${pos.distance.toFixed(1)}px`);
+      // console.log(`🎉 FOUND FREE POSITION at attempt ${i + 1}: (${pos.x}, ${pos.y}) distance: ${pos.distance.toFixed(1)}px`);
       return { x: pos.x, y: pos.y };
     }
   }
   
-  console.log('⚠️ No free positions found in grid search, using fallback...');
+  // console.log('⚠️ No free positions found in grid search, using fallback...');
   
   // Fallback: place to the right of the rightmost node
   const rightmostX = Math.max(
@@ -184,8 +184,8 @@ export function findOptimalNodePlacement(
     targetPosition.y - opts.nodeHeight / 2
   );
   
-  console.log(`🚨 FALLBACK POSITION: Rightmost X was ${rightmostX}, placing at:`, fallbackPos);
-  console.log('🏁 Node Placement Algorithm Complete');
+  // console.log(`🚨 FALLBACK POSITION: Rightmost X was ${rightmostX}, placing at:`, fallbackPos);
+  // console.log('🏁 Node Placement Algorithm Complete');
   
   return fallbackPos;
 }

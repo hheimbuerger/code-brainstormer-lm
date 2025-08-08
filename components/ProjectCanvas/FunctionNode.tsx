@@ -110,7 +110,8 @@ const EditableField = ({
   }, [inputValue, isEditing, autoResize]);
 
   const handleSave = () => {
-    if (inputValue.trim() !== '' || value === '') {
+    // Only save and trigger aspect state change if the value actually changed
+    if (inputValue !== value) {
       onSave(inputValue);
     }
     setIsEditing(false);
@@ -255,6 +256,40 @@ function FunctionNode(props: FunctionNodeProps) {
     updateCodeFunction(methodIndex, { [aspectKey]: newAspect } as Partial<CodeFunction>);
   };
 
+  // Helper function to calculate aspects to generate for reroll (includes clicked aspect)
+  const calculateAspectsToGenerateForReroll = (clickedAspect: CodeAspectType, func: any): CodeAspectType[] => {
+    const ASPECT_PROGRESSION = [
+      'identifier' as CodeAspectType,
+      'signature' as CodeAspectType, 
+      'specification' as CodeAspectType,
+      'implementation' as CodeAspectType,
+    ];
+    
+    const clickedIndex = ASPECT_PROGRESSION.indexOf(clickedAspect);
+    if (clickedIndex === -1) {
+      console.warn('Unknown aspect type:', clickedAspect);
+      return [];
+    }
+
+    const aspectsToGenerate: CodeAspectType[] = [];
+    
+    // Start from the clicked aspect (not the one after it)
+    for (let i = clickedIndex; i < ASPECT_PROGRESSION.length; i++) {
+      const aspectType = ASPECT_PROGRESSION[i];
+      const aspectState = func[aspectType]?.state;
+      
+      // If this aspect is locked, stop here
+      if (aspectState === 'LOCKED') {
+        break;
+      }
+      
+      // Add this aspect to the list to generate
+      aspectsToGenerate.push(aspectType);
+    }
+    
+    return aspectsToGenerate;
+  };
+
   // Helper function to trigger codegen for this function's aspect
   const triggerCodegenForFunction = (field: string, oldValue: string, newValue: string) => {
     if (methodIndex === undefined || !method) {
@@ -262,8 +297,11 @@ function FunctionNode(props: FunctionNodeProps) {
       return;
     }
 
-    // Calculate which aspects will be generated
-    const aspectsToGenerate = calculateAspectsToGenerate(field as CodeAspectType, method);
+    // For reroll operations (when oldValue !== newValue is false), use our custom calculation
+    // that includes the clicked aspect. For normal edits, use the standard calculation.
+    const aspectsToGenerate = oldValue === newValue || newValue === '' 
+      ? calculateAspectsToGenerateForReroll(field as CodeAspectType, method)
+      : calculateAspectsToGenerate(field as CodeAspectType, method);
     
     // Set processing fields for UI feedback
     console.log('Setting processing fields:', aspectsToGenerate, 'for method:', methodIndex);
@@ -612,7 +650,9 @@ function FunctionNode(props: FunctionNodeProps) {
             title="Double-click to create this function"
           >
             {fnCall}
-            <span className="new-function-indicator">*</span>
+            <div className="new-function-indicator">
+              ⭐
+            </div>
           </span>
         );
       }
@@ -635,8 +675,8 @@ function FunctionNode(props: FunctionNodeProps) {
       return; // Let function reference clicks through
     }
     
-    // Prevent node selection when clicking on non-header areas
-    if (!target.closest('.method-node__header')) {
+    // Prevent node selection when clicking on non-identifier areas
+    if (!target.closest('.method-node__identifier')) {
       e.stopPropagation();
     }
   };
@@ -652,7 +692,7 @@ function FunctionNode(props: FunctionNodeProps) {
       <Handle type="target" position={Position.Bottom} id="b" style={{ opacity: 0 }} isConnectable={false} />
       <Handle type="target" position={Position.Left} id="l" style={{ opacity: 0 }} isConnectable={false} />
 
-      <div className="method-node__header method-node-drag-handle" style={{position:'relative'}}>
+      <div className="method-node__identifier method-node-drag-handle" style={{position:'relative'}}>
         <EditableField
           value={method?.identifier?.descriptor || ''}
           onSave={(value) => handleAspectChange('identifier', value, method?.identifier?.descriptor || '')}
@@ -668,9 +708,10 @@ function FunctionNode(props: FunctionNodeProps) {
         <span className="delete-button" onClick={(e)=>{e.stopPropagation(); handleDeleteFunction();}}>
           ×
         </span>
+
       </div>
 
-      <div className="method-node__signature" style={{position:'relative'}}>
+      <div className="method-node__signature noDrag" style={{position:'relative'}}>
         <EditableField
           value={method?.signature?.descriptor || ''}
           onSave={(value) => handleAspectChange('signature', value, method?.signature?.descriptor || '')}
@@ -684,9 +725,12 @@ function FunctionNode(props: FunctionNodeProps) {
         <span className="field-state-icon" onClick={(e)=>{e.stopPropagation(); toggleAspectState('signature');}}>
           {isFieldProcessing('signature') ? <SpinnerDonut /> : getIconForState(method?.signature?.state)}
         </span>
+        <span className="reroll-button" onClick={(e)=>{e.stopPropagation(); triggerCodegenForFunction('signature', method?.signature?.descriptor || '', '');}} title="Reroll signature and subsequent aspects">
+          ↻
+        </span>
       </div>
 
-      <div className="method-node__specification">
+      <div className="method-node__specification noDrag">
         <EditableField
           value={method?.specification?.descriptor || ''}
           onSave={(value) => handleAspectChange('specification', value, method?.specification?.descriptor || '')}
@@ -699,18 +743,30 @@ function FunctionNode(props: FunctionNodeProps) {
         <span className="field-state-icon" onClick={(e)=>{e.stopPropagation(); toggleAspectState('specification');}}>
           {isFieldProcessing('specification') ? <SpinnerDonut /> : getIconForState(method?.specification?.state)}
         </span>
+        <span className="reroll-button" onClick={(e)=>{e.stopPropagation(); triggerCodegenForFunction('specification', method?.specification?.descriptor || '', '');}} title="Reroll specification and subsequent aspects">
+          ↻
+        </span>
       </div>
 
-      <div className="method-node__implementation">
-        <div className="method-node__implementation-content">
+      <div className="method-node__implementation noDrag" style={{position:'relative'}}>
+        <div
+          className={`implementation-content ${isFieldProcessing('implementation') ? 'processing' : ''}`}
+          style={{
+            opacity: isFieldProcessing('implementation') ? 0.5 : 1,
+            pointerEvents: isFieldProcessing('implementation') ? 'none' : 'auto'
+          }}
+        >
           {renderImplementation(method?.implementation?.descriptor || '')}
         </div>
         <span className="field-state-icon" onClick={(e)=>{e.stopPropagation(); toggleAspectState('implementation');}}>
           {isFieldProcessing('implementation') ? <SpinnerDonut /> : getIconForState(method?.implementation?.state)}
         </span>
+        <span className="reroll-button" onClick={(e)=>{e.stopPropagation(); triggerCodegenForFunction('implementation', method?.implementation?.descriptor || '', '');}} title="Reroll implementation">
+          ↻
+        </span>
       </div>
 
-      <Handle type="source" position={Position.Bottom} id="a" />
+
     </div>
   );
 }

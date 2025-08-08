@@ -17,32 +17,23 @@
   user-select: none;
 }
 
-.method-node__header {
+.method-node__identifier {
   padding: 10px;
   background-color: #f0f0f0;
   border-bottom: 1px solid #ccc;
-  font-weight: bold;
-  text-align: center;
-  cursor: grab;
-  user-select: none;
-}
-
-.method-node__header:active {
-  cursor: grabbing;
-}
-
-/* Ensure the drag handle takes full width of the header */
-.method-node-drag-handle {
-  width: 100%;
-  height: 100%;
-}
-
-.method-node__identifier {
+  border-top-left-radius: 7px; /* Slightly smaller than parent to account for border */
+  border-top-right-radius: 7px;
   font-size: 1em;
   font-weight: bold;
   color: #333;
-  cursor: text;
+  text-align: center;
+  cursor: grab;
+  user-select: none;
   transition: border-color 0.2s, background-color 0.2s;
+}
+
+.method-node__identifier:active {
+  cursor: grabbing;
 }
 
 .method-node__identifier:hover {
@@ -50,25 +41,38 @@
   background-color: #f9f9f9;
 }
 
+/* Ensure the drag handle takes full width of the identifier */
+.method-node-drag-handle {
+  width: 100%;
+  height: 100%;
+}
+
 .method-node__signature {
   text-align: center;
   font-size: 0.8em;
   color: #555;
-  padding: 8px 10px;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 8px 30px 8px 10px;
   background-color: white;
 }
 
 .method-node__specification, .method-node__implementation {
   font-size: 0.75em;
   color: #444;
-  padding: 6px 6px; /* Reduced outer padding to compensate for inner padding */
+  padding: 6px 30px 6px 6px; /* Right padding for icons space */
   line-height: 1.3;
   background-color: white;
-  border-bottom: 1px solid #e0e0e0;
   position: relative;
   white-space: pre-wrap; /* Unified formatting for both fields */
   /* Ensure pointer events work for hover effects */
+}
+
+.method-node__signature, .method-node__specification {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.method-node__implementation {
+  border-bottom-left-radius: 7px;
+  border-bottom-right-radius: 7px;
 }
 
 /* Implementation content wrapper to match EditableField padding */
@@ -112,14 +116,42 @@
   justify-content: center;
 }
 
-/* Show delete button on hover over the header */
-.method-node__header:hover .delete-button {
+/* Show delete button on hover over the identifier */
+.method-node__identifier:hover .delete-button {
   opacity: 1;
 }
 
 /* Delete button hover state */
 .delete-button:hover {
   color: #ff4444 !important;
+  transform: scale(1.1);
+}
+
+/* Reroll button styling - appears on hover over aspects */
+.reroll-button {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 0.2s ease, color 0.2s ease;
+  z-index: 10;
+  padding: 2px;
+  border-radius: 2px;
+  color: #666;
+}
+
+/* Show reroll button on hover over signature, specification, or implementation */
+.method-node__signature:hover .reroll-button,
+.method-node__specification:hover .reroll-button,
+.method-node__implementation:hover .reroll-button {
+  opacity: 1;
+}
+
+/* Reroll button hover state */
+.reroll-button:hover {
+  color: #007acc !important;
   transform: scale(1.1);
 }
 
@@ -244,7 +276,6 @@
 
 .inline-fn-call.existing-function:hover {
   background-color: rgba(0, 102, 204, 0.15);
-  text-decoration: underline;
 }
 
 /* New function references */
@@ -255,16 +286,26 @@
 
 .inline-fn-call.new-function:hover {
   background-color: rgba(204, 102, 0, 0.15);
-  text-decoration: underline;
 }
 
-/* New function indicator (asterisk) */
+/* New function indicator (star icon) */
 .new-function-indicator {
-  color: #ff6600;
-  font-weight: bold;
-  font-size: 1.1em;
-  margin-left: 2px;
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  background-color: #ff6600;
+  border: 1px solid #cc5500;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  color: white;
   animation: pulse 2s infinite;
+  z-index: 10;
 }
 
 @keyframes pulse {

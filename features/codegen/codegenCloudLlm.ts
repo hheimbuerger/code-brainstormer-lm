@@ -22,8 +22,9 @@ export const SYSTEM_PROMPT = `
   * specification: the description of the function, including use cases: what it can do and what it needs to do that. Think of this as the function's docstring!
   * implementation: a textual description of the function's logic, including a *complete* list of all function calls it can invoke. *Not* source code! *Not* markdown either. May contain paragraph breaks for structure. Think of it as the sequence of all code block comments in the function's body. You may specifically mention branches and loops here.
 
-  The implementation aspect can and *should* include function calls. They are displayed as functionName(arg1, arg2, ...), with all arguments being optional. Do not wrap function calls in backticks.
+  The implementation aspect can and *should* include function calls. They are displayed as 'functionName(arg1, arg2, ...)', with all arguments being optional. Do not wrap function calls in backticks.
   The system will collect all function calls from the implementation string you're generating, and this will build the call hierarchy of the entire codebase, so this is a very important aspect to generate!
+  Make sure you generate the paratheses behind the function call, even if you're only referring to the function abstractly and without specific arguments/parameters, otherwise it won't be interpreted as a function call by the rest of the system.
 
   We're considering the four aspects a descending hierarchy of specificity. That is, the signature follows the identifier, the specification follows the signature, and the implementation follows the specification.
 

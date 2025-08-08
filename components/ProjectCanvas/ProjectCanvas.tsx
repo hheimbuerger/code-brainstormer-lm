@@ -169,6 +169,7 @@ export default function ProjectCanvas() {
   }, [codeFunctions, nodePositions, newlyCreatedNodeIndex]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges] = useState<Edge[]>([]);
 
   // Handler for double-clicking on empty canvas to create new node
   const handleCanvasDoubleClick = useCallback((event: React.MouseEvent) => {
@@ -248,11 +249,10 @@ export default function ProjectCanvas() {
     setNodes(initialNodes);
   }, [initialNodes, setNodes]);
 
-    const [edges, setEdges] = useState<Edge[]>(() => buildEdges([], codeFunctions));
-
-    useEffect(() => {
-      setEdges(buildEdges(nodes, codeFunctions));
-    }, [nodes, codeFunctions, setEdges]);
+  // Update React Flow nodes when codeFunctions or nodePositions change (but not during dragging)
+  useEffect(() => {
+    setNodes(initialNodes);
+  }, [initialNodes, setNodes]);
 
   return (
       <div className="project-canvas">
@@ -299,6 +299,7 @@ export default function ProjectCanvas() {
             }}
             nodesDraggable
             nodeDragThreshold={1}
+            noDragClassName="noDrag"
             zoomOnDoubleClick={false}
             onNodeDrag={(e, dragged) => {
               // Real-time update during dragging for smooth UI feedback
