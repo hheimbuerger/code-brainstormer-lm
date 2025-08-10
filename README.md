@@ -2,9 +2,11 @@
 
 **Interactive playground for designing, visualizing and iterating on structured programming code in collaboration with an LLM.**
 
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Next.js](https://img.shields.io/badge/Next.js-14-black) ![React Flow](https://img.shields.io/badge/React_Flow-11-purple) ![Zustand](https://img.shields.io/badge/Zustand-5-orange)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue) ![Next.js](https://img.shields.io/badge/Next.js-15-black) ![React Flow](https://img.shields.io/badge/React_Flow-11-purple) ![Zustand](https://img.shields.io/badge/Zustand-5-orange)
 
 ## 🚀 Quick Start
+
+Create `.env.local` with your `ANTHROPIC_API_KEY`.
 
 ```bash
 # Install dependencies
@@ -54,7 +56,7 @@ npm run dev
 
 ### Editing Functions
 
-- **Click any field** to edit (identifier, signature, specification, implementation)
+- **Click any field** to edit (identifier, signature, specification)
 - **Auto-resize fields** expand to fit your content
 - **LLM assistance** generates related aspects automatically
 - **Lock/unlock aspects** using the state icons
@@ -75,14 +77,15 @@ npm run dev
 
 ## 🛠️ Tech Stack
 
-- **[TypeScript 5](https://www.typescriptlang.org/)** - Type-safe development
-- **[Next.js 14](https://nextjs.org/)** - React framework with App Router
+- **[TypeScript 5.8](https://www.typescriptlang.org/)** - Type-safe development
+- **[Next.js 15](https://nextjs.org/)** - React framework with App Router
 - **[React Flow 11](https://reactflow.dev/)** - Interactive node-based UI
 - **[Zustand 5](https://github.com/pmndrs/zustand)** - Lightweight state management
 - **[React Query](https://tanstack.com/query)** - Server state management
-- **[Tailwind CSS](https://tailwindcss.com/)** - Utility-first styling
 
 ## 🏗️ Project Structure
+
+This section describes the structure of the project and its main components.
 
 ```
 ├── app/                    # Next.js App Router
@@ -115,7 +118,3 @@ npm run dev
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-**Built with ❤️ for developers who think visually**
