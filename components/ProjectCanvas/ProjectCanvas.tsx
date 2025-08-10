@@ -249,10 +249,10 @@ export default function ProjectCanvas() {
     setNodes(initialNodes);
   }, [initialNodes, setNodes]);
 
-  // Update React Flow nodes when codeFunctions or nodePositions change (but not during dragging)
+  // Rebuild edges whenever codeFunctions or nodes change (e.g., after code generation)
   useEffect(() => {
-    setNodes(initialNodes);
-  }, [initialNodes, setNodes]);
+    setEdges(buildEdges(nodes, codeFunctions));
+  }, [codeFunctions, nodes]);
 
   return (
       <div className="project-canvas">
