@@ -50,9 +50,9 @@ export function calculateNodeHeight(codeFunction: any): number {
   const finalHeight = Math.max(MIN_HEIGHT, estimatedHeight);
   
   // Debug logging for initial placement issues
-  if (codeFunction.identifier?.descriptor) {
-    console.log(`📏 Node height for '${codeFunction.identifier.descriptor}': ${finalHeight}px (${debugInfo})`);
-  }
+  // if (codeFunction.identifier?.descriptor) {
+  //   console.log(`📏 Node height for '${codeFunction.identifier.descriptor}': ${finalHeight}px (${debugInfo})`);
+  // }
   
   // Add extra buffer for safety to prevent overlaps
   return finalHeight + 10; // 10px safety buffer

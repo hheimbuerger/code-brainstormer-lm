@@ -4,8 +4,9 @@ import { CodeGenCommand, CommandType } from './codegenCommands';
 // ---------------------------------------------------------------------------
 // Configuration constants for the hard-coded cloud test
 // ---------------------------------------------------------------------------
-export const CLOUD_LLM_MODEL = 'claude-3-5-haiku-20241022';    // cheapest model for testing and prototyping
-// export const CLOUD_LLM_MODEL = 'claude-4-sonnet-20250514';    // modern efficient model
+// export const CLOUD_LLM_MODEL = 'claude-3-5-haiku-20241022';    // cheapest model for testing and prototyping
+export const CLOUD_LLM_MODEL = 'claude-4-sonnet-20250514';    // efficient model
+// export const CLOUD_LLM_MODEL = 'claude-opus-4-1-20250805';    // most capable, slower model
 
 export const CLOUD_LLM_MAX_TOKENS = 2048;
 
@@ -54,7 +55,7 @@ export const SYSTEM_PROMPT = `
       "value": string
     }
 
-  DO NOT RETURN ANY MARKDOWN AROUND IT, ONLY JSON!
+  RETURN ONLY JSON! NO MARKDOWN!
 `;
 import { CodegenTrigger } from './codegenBackend';
 import { PackagedCodebase } from './codegenPackaging';
@@ -64,15 +65,32 @@ import { PackagedCodebase } from './codegenPackaging';
  * minimum fields of a `CodeGenCommand` union.  (Replace with zod in future.)
  */
 function isValidCodeGenCommand(obj: any): obj is CodeGenCommand {
-  if (!obj || typeof obj !== 'object') return false;
-  if (typeof obj.type !== 'string') return false;
+  if (!obj || typeof obj !== 'object') {
+    console.warn('[DEBUG] Command validation failed: not an object', obj);
+    return false;
+  }
+  if (typeof obj.type !== 'string') {
+    console.warn('[DEBUG] Command validation failed: type is not string', obj);
+    return false;
+  }
+  
+  console.log('[DEBUG] Validating command:', obj);
+  
   switch (obj.type as CommandType) {
     case CommandType.UPDATE_ASPECT:
-      return (
+      const isValid = (
         typeof obj.methodName === 'string' &&
         typeof obj.aspect === 'string' &&
         typeof obj.value === 'string'
       );
+      if (!isValid) {
+        console.warn('[DEBUG] UPDATE_ASPECT validation failed:', {
+          methodName: typeof obj.methodName,
+          aspect: typeof obj.aspect,
+          value: typeof obj.value
+        });
+      }
+      return isValid;
     case CommandType.CREATE_METHOD:
       return typeof obj.className === 'string' && !!obj.method;
     case CommandType.DELETE_METHOD:
@@ -84,6 +102,7 @@ function isValidCodeGenCommand(obj: any): obj is CodeGenCommand {
         typeof obj.value === 'string'
       );
     default:
+      console.warn('[DEBUG] Command validation failed: unknown type', obj.type);
       return false;
   }
 }
@@ -141,7 +160,15 @@ export async function cloudLlmGenerateCode(snapshot: PackagedCodebase, trigger: 
     ? response.content.map((c: any) => ('text' in c ? c.text : '')).join('')
     : String(response.content);
 
-  const jsonText = rawText.trim();
+  let jsonText = rawText.trim();
+  
+  // Handle JSON wrapped in markdown code blocks (```json ... ```)
+  const jsonCodeBlockRegex = /^```(?:json)?\s*\n?([\s\S]*?)\n?```$/;
+  const match = jsonText.match(jsonCodeBlockRegex);
+  if (match) {
+    jsonText = match[1].trim();
+  }
+  
   try {
     const parsed = JSON.parse(jsonText);
     console.log('[DEBUG] LLM rationale:', parsed.rationale);
