@@ -190,24 +190,20 @@ interface FunctionNodeData {
 type FunctionNodeProps = NodeProps<FunctionNodeData>;
 
 function FunctionNode(props: FunctionNodeProps) {
-  const { id: nodeId, data, selected } = props;
+  const { data, selected } = props;
   const { methodIndex } = data;
+  const nodeId = `method-${methodIndex}`;
   const updateNodeInternals = useUpdateNodeInternals();
-  const { setViewport, getViewport, screenToFlowPosition } = useReactFlow();
+  const { getViewport, setViewport, screenToFlowPosition } = useReactFlow();
   
-  // Get store data first
-  const { codeFunctions, updateCodeFunction, addCodeFunction, removeCodeFunction, nodePositions } = useCodebaseStore();
-  
-  // Select only the required slice so the node re-renders whenever this function changes
+  // Store references
+  const { codeFunctions, updateCodeFunction, removeCodeFunction, addCodeFunction, nodePositions } = useCodebaseStore();
   const method = methodIndex !== undefined ? codeFunctions[methodIndex] : undefined;
-
-  // Force React Flow to recalculate handle positions whenever implementation text changes
-  useEffect(() => {
-    updateNodeInternals(nodeId);
-  }, [nodeId, method?.implementation?.descriptor, updateNodeInternals]);
-
-  // State to track which fields are currently being processed
+  
+  // Local state for processing fields
   const [processingFields, setProcessingFields] = useState<string[]>([]);
+  const [hoveredHandleId, setHoveredHandleId] = useState<string | null>(null);
+  const prevHighlightedRef = useRef<SVGGElement | null>(null);
 
   // React Query mutation for codegen (moved from EditableField)
   const codegenMutation = useMutation({
@@ -216,15 +212,15 @@ function FunctionNode(props: FunctionNodeProps) {
       field,
       oldValue,
       newValue,
+      aspectsToGenerate,
     }: {
       methodIndex: number;
       field: string;
       oldValue: string;
       newValue: string;
+      aspectsToGenerate: CodeAspectType[];
     }) => {
-      // Calculate which aspects will be generated and mark them as processing
-      const aspectsToGenerate = calculateAspectsToGenerate(field as CodeAspectType, method!);
-      setProcessingFields(aspectsToGenerate);
+      // Use the pre-calculated aspectsToGenerate list
       return invokeCodegenForFunction(methodIndex, field);
     },
     onSuccess: (commands) => {
@@ -256,52 +252,14 @@ function FunctionNode(props: FunctionNodeProps) {
     updateCodeFunction(methodIndex, { [aspectKey]: newAspect } as Partial<CodeFunction>);
   };
 
-  // Helper function to calculate aspects to generate for reroll (includes clicked aspect)
-  const calculateAspectsToGenerateForReroll = (clickedAspect: CodeAspectType, func: any): CodeAspectType[] => {
-    const ASPECT_PROGRESSION = [
-      'identifier' as CodeAspectType,
-      'signature' as CodeAspectType, 
-      'specification' as CodeAspectType,
-      'implementation' as CodeAspectType,
-    ];
-    
-    const clickedIndex = ASPECT_PROGRESSION.indexOf(clickedAspect);
-    if (clickedIndex === -1) {
-      console.warn('Unknown aspect type:', clickedAspect);
-      return [];
-    }
 
-    const aspectsToGenerate: CodeAspectType[] = [];
-    
-    // Start from the clicked aspect (not the one after it)
-    for (let i = clickedIndex; i < ASPECT_PROGRESSION.length; i++) {
-      const aspectType = ASPECT_PROGRESSION[i];
-      const aspectState = func[aspectType]?.state;
-      
-      // If this aspect is locked, stop here
-      if (aspectState === 'LOCKED') {
-        break;
-      }
-      
-      // Add this aspect to the list to generate
-      aspectsToGenerate.push(aspectType);
-    }
-    
-    return aspectsToGenerate;
-  };
 
   // Helper function to trigger codegen for this function's aspect
-  const triggerCodegenForFunction = (field: string, oldValue: string, newValue: string) => {
+  const triggerCodegenForFunction = (field: string, oldValue: string, newValue: string, aspectsToGenerate: CodeAspectType[]) => {
     if (methodIndex === undefined || !method) {
       console.warn('Cannot trigger codegen: method or methodIndex is undefined');
       return;
     }
-
-    // For reroll operations (when oldValue !== newValue is false), use our custom calculation
-    // that includes the clicked aspect. For normal edits, use the standard calculation.
-    const aspectsToGenerate = oldValue === newValue || newValue === '' 
-      ? calculateAspectsToGenerateForReroll(field as CodeAspectType, method)
-      : calculateAspectsToGenerate(field as CodeAspectType, method);
     
     // Set processing fields for UI feedback
     console.log('Setting processing fields:', aspectsToGenerate, 'for method:', methodIndex);
@@ -313,6 +271,7 @@ function FunctionNode(props: FunctionNodeProps) {
       field,
       oldValue,
       newValue,
+      aspectsToGenerate, // Pass the pre-calculated list
     });
   };
 
@@ -329,6 +288,9 @@ function FunctionNode(props: FunctionNodeProps) {
     const createUpdatedAspect = (aspect: CodeAspect, descriptor: string, newState: AspectState = AspectState.EDITED): CodeAspect => {
       return new CodeAspect(descriptor, newState);
     };
+    
+    // Calculate aspects to generate for normal edits (excludes the edited aspect)
+    const aspectsToGenerate = calculateAspectsToGenerate(aspect as CodeAspectType, method, false);
 
     // STEP 1: Handle identifier renaming - update function references in other functions FIRST
     if (aspect === 'identifier' && value !== oldValue && oldValue.trim() && value.trim()) {
@@ -388,9 +350,10 @@ function FunctionNode(props: FunctionNodeProps) {
 
     updateCodeFunction(methodIndex, updates); // persist aspect edits
 
-    // STEP 3: Trigger codegen if the value actually changed (this now happens AFTER reference updates)
+    // STEP 3: Trigger codegen for subsequent aspects if the value actually changed
     if (value !== oldValue) {
-      triggerCodegenForFunction(aspect, oldValue, value);
+      console.log(`Aspect '${aspect}' changed from '${oldValue}' to '${value}' - triggering codegen`);
+      triggerCodegenForFunction(aspect, oldValue, value, aspectsToGenerate);
     }
   };
 
@@ -411,19 +374,13 @@ function FunctionNode(props: FunctionNodeProps) {
       console.log('🚀 Auto-triggering codegen for newly created function:', method.identifier.descriptor);
       hasTriggeredCodegen.current = true;
       
-      // Use the existing React Query mutation system instead of the helper
-      // This should properly set up UI state and processing fields
-      codegenMutation.mutate({
-        methodIndex,
-        field: 'identifier',
-        oldValue: '',
-        newValue: method.identifier.descriptor,
-      });
+      // Use the same flow as manual triggers to ensure proper UI state management
+      const aspectsToGenerate = calculateAspectsToGenerate('identifier' as CodeAspectType, method, false);
+      triggerCodegenForFunction('identifier', '', method.identifier.descriptor, aspectsToGenerate);
     }
   }, [method, methodIndex, codegenMutation]);
 
-  // Ref to track previously highlighted edge group
-  const prevHighlightedRef = useRef<SVGGElement | null>(null);
+
 
   /**
    * Highlight the edge whose `className` matches the hovered inline handle.
@@ -551,12 +508,6 @@ function FunctionNode(props: FunctionNodeProps) {
               data-fn-name={fnName}
               data-handle-id={`${fnName}-${methodIndex}-${localIndex}`}
               className="inline-fn-handle"
-              style={{
-                width: 8,
-                height: 8,
-                transition: 'transform 0.1s ease',
-                zIndex: 10
-              }}
               isConnectable={false}
               onMouseEnter={() => handleMouseEnter(`${fnName}-${methodIndex}-${localIndex}`)}
               onMouseLeave={handleMouseLeave}
@@ -692,11 +643,11 @@ function FunctionNode(props: FunctionNodeProps) {
       <Handle type="target" position={Position.Bottom} id="b" style={{ opacity: 0 }} isConnectable={false} />
       <Handle type="target" position={Position.Left} id="l" style={{ opacity: 0 }} isConnectable={false} />
 
-      <div className="method-node__identifier method-node-drag-handle" style={{position:'relative'}}>
+      <div className="method-node__identifier method-node-drag-handle">
         <EditableField
           value={method?.identifier?.descriptor || ''}
           onSave={(value) => handleAspectChange('identifier', value, method?.identifier?.descriptor || '')}
-          placeholder="Enter method name"
+          placeholder="Enter function name"
           className="method-node__identifier"
           isBold
           nodeId={nodeId}
@@ -711,7 +662,7 @@ function FunctionNode(props: FunctionNodeProps) {
 
       </div>
 
-      <div className="method-node__signature noDrag" style={{position:'relative'}}>
+      <div className="method-node__signature noDrag">
         <EditableField
           value={method?.signature?.descriptor || ''}
           onSave={(value) => handleAspectChange('signature', value, method?.signature?.descriptor || '')}
@@ -725,16 +676,22 @@ function FunctionNode(props: FunctionNodeProps) {
         <span className="field-state-icon" onClick={(e)=>{e.stopPropagation(); toggleAspectState('signature');}}>
           {isFieldProcessing('signature') ? <SpinnerDonut /> : getIconForState(method?.signature?.state)}
         </span>
-        <span className="reroll-button" onClick={(e)=>{e.stopPropagation(); triggerCodegenForFunction('signature', method?.signature?.descriptor || '', '');}} title="Reroll signature and subsequent aspects">
-          ↻
-        </span>
+        {method?.signature?.state !== AspectState.UNSET && (
+          <span className="reroll-button" onClick={(e)=>{
+            e.stopPropagation(); 
+            const aspectsToGenerate = method ? calculateAspectsToGenerate('signature' as CodeAspectType, method, true) : [];
+            triggerCodegenForFunction('signature', method?.signature?.descriptor || '', method?.signature?.descriptor || '', aspectsToGenerate);
+          }} title="Reroll signature and subsequent aspects">
+            ↻
+          </span>
+        )}
       </div>
 
       <div className="method-node__specification noDrag">
         <EditableField
           value={method?.specification?.descriptor || ''}
           onSave={(value) => handleAspectChange('specification', value, method?.specification?.descriptor || '')}
-          placeholder="Enter specification"
+          placeholder="specification"
           nodeId={nodeId}
           fieldName="specification"
           methodIndex={methodIndex}
@@ -743,27 +700,37 @@ function FunctionNode(props: FunctionNodeProps) {
         <span className="field-state-icon" onClick={(e)=>{e.stopPropagation(); toggleAspectState('specification');}}>
           {isFieldProcessing('specification') ? <SpinnerDonut /> : getIconForState(method?.specification?.state)}
         </span>
-        <span className="reroll-button" onClick={(e)=>{e.stopPropagation(); triggerCodegenForFunction('specification', method?.specification?.descriptor || '', '');}} title="Reroll specification and subsequent aspects">
-          ↻
-        </span>
+        {method?.specification?.state !== AspectState.UNSET && (
+          <span className="reroll-button" onClick={(e)=>{
+            e.stopPropagation(); 
+            const aspectsToGenerate = method ? calculateAspectsToGenerate('specification' as CodeAspectType, method, true) : [];
+            triggerCodegenForFunction('specification', method?.specification?.descriptor || '', method?.specification?.descriptor || '', aspectsToGenerate);
+          }} title="Reroll specification and subsequent aspects">
+            ↻
+          </span>
+        )}
       </div>
 
-      <div className="method-node__implementation noDrag" style={{position:'relative'}}>
+      <div className="method-node__implementation noDrag">
         <div
           className={`implementation-content ${isFieldProcessing('implementation') ? 'processing' : ''}`}
-          style={{
-            opacity: isFieldProcessing('implementation') ? 0.5 : 1,
-            pointerEvents: isFieldProcessing('implementation') ? 'none' : 'auto'
-          }}
         >
-          {renderImplementation(method?.implementation?.descriptor || '')}
+          {method?.implementation?.descriptor ? renderImplementation(method.implementation.descriptor) : (
+            <span className="implementation-placeholder">implementation</span>
+          )}
         </div>
         <span className="field-state-icon" onClick={(e)=>{e.stopPropagation(); toggleAspectState('implementation');}}>
           {isFieldProcessing('implementation') ? <SpinnerDonut /> : getIconForState(method?.implementation?.state)}
         </span>
-        <span className="reroll-button" onClick={(e)=>{e.stopPropagation(); triggerCodegenForFunction('implementation', method?.implementation?.descriptor || '', '');}} title="Reroll implementation">
-          ↻
-        </span>
+        {method?.implementation?.state !== AspectState.UNSET && (
+          <span className="reroll-button" onClick={(e)=>{
+            e.stopPropagation(); 
+            const aspectsToGenerate = method ? calculateAspectsToGenerate('implementation' as CodeAspectType, method, true) : [];
+            triggerCodegenForFunction('implementation', method?.implementation?.descriptor || '', method?.implementation?.descriptor || '', aspectsToGenerate);
+          }} title="Reroll implementation">
+            ↻
+          </span>
+        )}
       </div>
 
 

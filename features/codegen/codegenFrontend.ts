@@ -115,11 +115,13 @@ interface FunctionWithAspects {
  * 
  * @param editedAspect - The aspect that was just edited
  * @param func - The current function state (CodeFunction or PackagedCodeFunction)
+ * @param includeEditedAspect - Whether to include the edited aspect itself (true for reroll, false for normal edit)
  * @returns Array of CodeAspectType values that should be generated
  */
 export function calculateAspectsToGenerate(
   editedAspect: CodeAspectType,
-  func: FunctionWithAspects
+  func: FunctionWithAspects,
+  includeEditedAspect: boolean = false
 ): CodeAspectType[] {
   const editedIndex = ASPECT_PROGRESSION.indexOf(editedAspect);
   if (editedIndex === -1) {
@@ -129,8 +131,10 @@ export function calculateAspectsToGenerate(
 
   const aspectsToGenerate: CodeAspectType[] = [];
   
-  // Start from the aspect after the edited one
-  for (let i = editedIndex + 1; i < ASPECT_PROGRESSION.length; i++) {
+  // Start from the edited aspect (for reroll) or the aspect after it (for normal edit)
+  const startIndex = includeEditedAspect ? editedIndex : editedIndex + 1;
+  
+  for (let i = startIndex; i < ASPECT_PROGRESSION.length; i++) {
     const aspectType = ASPECT_PROGRESSION[i];
     const aspectState = func[aspectType].state;
     

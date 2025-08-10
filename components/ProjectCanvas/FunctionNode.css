@@ -75,13 +75,13 @@
   border-bottom-right-radius: 7px;
 }
 
-/* Implementation content wrapper to match EditableField padding */
-.method-node__implementation-content {
-  padding: 2px 4px; /* Same padding as .editable-field */
-  margin: 0;
+/* Ensure all editable fields have consistent minimum height */
+.editable-field {
+  min-height: 1.2em;
+  padding: 2px 4px;
   border: 1px solid transparent;
   border-radius: 3px;
-  min-height: 1em;
+  cursor: text;
 }
 
 /* Remove border from the last content item */
@@ -130,8 +130,8 @@
 /* Reroll button styling - appears on hover over aspects */
 .reroll-button {
   position: absolute;
-  bottom: 4px;
-  right: 4px;
+  bottom: 0;
+  right: 3px;
   cursor: pointer;
   font-size: 11px;
   opacity: 0;
@@ -186,6 +186,46 @@
 
 .react-flow__handle-bottom {
   bottom: -3px;
+}
+
+/* Position relative for field containers */
+.method-node__identifier,
+.method-node__signature,
+.method-node__implementation {
+  position: relative;
+}
+
+/* Invisible target handles */
+.method-node .react-flow__handle[style*="opacity: 0"] {
+  opacity: 0 !important;
+}
+
+/* Inline function handle dimensions and positioning */
+.inline-fn-handle {
+  width: 8px;
+  height: 8px;
+  transition: transform 0.1s ease;
+  z-index: 10;
+}
+
+/* Implementation content styling */
+.implementation-content {
+  min-height: 1.2em;
+  padding: 2px 4px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  white-space: pre-wrap;
+}
+
+.implementation-content.processing {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Placeholder text styling */
+.implementation-placeholder {
+  color: #999;
+  font-style: italic;
 }
 
 /* Inline function call styling */
