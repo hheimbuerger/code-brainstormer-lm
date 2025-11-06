@@ -5,8 +5,9 @@ import { CodeGenCommand, CommandType } from './codegenCommands';
 // Configuration constants for the hard-coded cloud test
 // ---------------------------------------------------------------------------
 // export const CLOUD_LLM_MODEL = 'claude-3-5-haiku-20241022';    // cheapest model for testing and prototyping
-export const CLOUD_LLM_MODEL = 'claude-4-sonnet-20250514';    // efficient model
+// export const CLOUD_LLM_MODEL = 'claude-4-sonnet-20250514';    // efficient model
 // export const CLOUD_LLM_MODEL = 'claude-opus-4-1-20250805';    // most capable, slower model
+export const CLOUD_LLM_MODEL = 'claude-sonnet-4-5';    // latest model
 
 export const CLOUD_LLM_MAX_TOKENS = 2048;
 
@@ -38,6 +39,12 @@ export const SYSTEM_PROMPT = `
   If the existing aspect fits your new inputs, don't change it. If you need a function call, and there is one that fits okay, then call it instead of generating a new one.
   If an existing function sounds like what you need, then use it, even if the parameter or signature isn't precisely what you had in mind.
   But when the function you're generating requires another helper function, which doesn't exist yet, feel free to generate a function call to a new function.
+
+  Keep it short, whenever possible. This means generating quite short (and potentially vague) specification and implementation if you have little information (low specificity) and you're just guessing, or if it's a simple task. Guess when necessary, but don't go on longer tangents if the system
+  context doesn't actually provide you with data to guess. However, if you know very precisely what's required, you may generate longer texts.
+  General guideline: one sentence if you all you have is a function name, two sentences if you also have some system context what the function is needed for. Three sentences if you already know the purpose of the function. Four to five sentences if it's really clear what precisely the function will do.
+
+  In the specification, avoid talking about the signature. You may mention parameters and return type if it's useful to understand the purpose of the function, but you don't have to mention any parameters.
 
   Be very lenient about data types and parameters, that's not the focus of this system.
 

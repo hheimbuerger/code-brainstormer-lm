@@ -2,6 +2,8 @@
 
 **Interactive playground for designing, visualizing and iterating on structured programming code in collaboration with an LLM.**
 
+![Code-Brainstormer LM Screenshot](public/site/screenshot.png)
+
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue) ![Next.js](https://img.shields.io/badge/Next.js-15-black) ![React Flow](https://img.shields.io/badge/React_Flow-11-purple) ![Zustand](https://img.shields.io/badge/Zustand-5-orange)
 
 ## 🚀 Quick Start
@@ -85,19 +87,17 @@ npm run dev
 
 ## 🏗️ Project Structure
 
-This section describes the structure of the project and its main components.
-
 ```
-├── app/                    # Next.js App Router
-├── components/
-│   └── ProjectCanvas/      # Main visual editor
-│       ├── ProjectCanvas.tsx    # Canvas with double-click handlers
-│       └── FunctionNode.tsx     # Individual function nodes
-├── store/                  # Zustand state management
-├── data/                   # Data loading and persistence
-├── utils/                  # Utilities (node placement, etc.)
-├── docs/                   # Comprehensive documentation
-└── public/                 # Static assets and example data
+├── app/                    # Next.js App Router (pages, layouts, server actions)
+├── components/             # React components (ProjectCanvas, FunctionNode)
+├── features/               # Feature modules (codegen with LLM backends)
+├── store/                  # Zustand state management (codebase store)
+├── data/                   # Data schemas and loaders
+├── constants/              # Shared constants (node types, colors, etc.)
+├── utils/                  # Utility functions (node placement algorithms)
+├── lib/                    # Third-party library configurations
+├── docs/                   # Architecture and user documentation
+└── public/                 # Static assets and example datasets
 ```
 
 ## 🎯 Use Cases
@@ -106,14 +106,6 @@ This section describes the structure of the project and its main components.
 - **👨‍🏫 Teaching Aid** - Demonstrate clean code decomposition visually
 - **🚀 Spike Prototyping** - Validate algorithm breakdowns before coding
 - **📝 Doc-as-Code** - Keep design docs in sync with implementation
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
 
 ## 📄 License
 
