@@ -99,7 +99,7 @@ export interface CodebaseState {
   
   // Core actions
   updateProjectName: (name: string) => void;
-  addCodeFunction: (position: { x: number; y: number }) => string; // Returns the new function's ID
+  addCodeFunction: (position: { x: number; y: number }, initialData?: Partial<CodeFunctionData>) => string; // Returns the new function's ID
   updateCodeFunction: (id: string, func: Partial<CodeFunction>) => void;
   removeCodeFunction: (id: string) => void;
   loadProjectFromFile: () => Promise<void>;

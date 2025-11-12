@@ -542,12 +542,10 @@ function FunctionNode(props: FunctionNodeProps) {
               // Find optimal placement near click position
               const optimalPosition = findOptimalNodePlacement(clickPosition, existingNodes);
               
-              // Add to store with calculated position - this returns the new function's ID
-              const newFunctionId = addCodeFunction(optimalPosition);
-              
-              // Update with the function name and AUTOGEN state to trigger codegen
-              updateCodeFunction(newFunctionId, {
-                identifier: new CodeAspect(fnName, AspectState.AUTOGEN)
+              // Add to store with calculated position AND initial identifier in AUTOGEN state
+              // This ensures the function is created with the correct state in a single update
+              const newFunctionId = addCodeFunction(optimalPosition, {
+                identifier: { descriptor: fnName, state: AspectState.AUTOGEN }
               });
               
               // Don't auto-focus for named nodes (identifier already filled)

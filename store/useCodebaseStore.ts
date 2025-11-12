@@ -52,8 +52,8 @@ export const useCodebaseStore = create<CodebaseState>()(
       },
       
       // Add a new function with required position
-      addCodeFunction: (position: { x: number; y: number }) => {
-        const newFunction = createCodeFunction({ position });
+      addCodeFunction: (position: { x: number; y: number }, initialData?: Partial<CodeFunctionData>) => {
+        const newFunction = createCodeFunction({ position, ...initialData });
         set((state) => {
           const codeFunctions = [...state.codeFunctions, newFunction];
           

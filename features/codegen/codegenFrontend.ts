@@ -28,11 +28,11 @@ export function applyCodegenCommands(initialCmds: CodeGenCommand[]) {
 
     switch (cmd.type) {
       case CommandType.CREATE_METHOD: {
-        // addCodeFunction now returns the new function's ID
-        const newFunctionId = store.addCodeFunction({ x: 100, y: 100 }); // Default position, will be adjusted by placement algorithm
-        // Update the newly created function with the provided data
-        const newFunction = createCodeFunction(cmd.method);
-        store.updateCodeFunction(newFunctionId, newFunction);
+        // Create the function with initial data in a single update
+        const newFunctionId = store.addCodeFunction(
+          { x: 100, y: 100 }, // Default position, will be adjusted by placement algorithm
+          cmd.method // Initial function data
+        );
         // Example: enqueue further commands if needed
         // enqueue(cmdsToEnqueue);
         break;
