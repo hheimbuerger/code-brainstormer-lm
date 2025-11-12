@@ -55,8 +55,7 @@ function buildEdges(nodes: Node[], codeFunctions: any[]): Edge[] {
   const fnRegex = /[A-Za-z_]+(?=\()/g;
 
   nodes.forEach((srcNode) => {
-    const srcIdx = parseInt(srcNode.id.replace('method-', ''), 10);
-    const method = codeFunctions[srcIdx];
+    const method = codeFunctions.find((f: any) => f.id === srcNode.id);
     if (!method) return;
     const impl = method.implementation?.descriptor ?? '';
     let match: RegExpExecArray | null;
@@ -65,9 +64,9 @@ function buildEdges(nodes: Node[], codeFunctions: any[]): Edge[] {
       const fnName = match[0];
       const localIndex = fnCounts[fnName] ?? 0;
       fnCounts[fnName] = localIndex + 1;
-      const tgtIdx = codeFunctions.findIndex((f: any) => f.identifier?.descriptor?.startsWith(fnName));
-      if (tgtIdx === -1) continue;
-      const tgtNode = nodes.find((n) => n.id === `method-${tgtIdx}`);
+      const targetFunc = codeFunctions.find((f: any) => f.identifier?.descriptor?.startsWith(fnName));
+      if (!targetFunc) continue;
+      const tgtNode = nodes.find((n) => n.id === targetFunc.id);
       if (!tgtNode) continue;
       const dx = tgtNode.position.x - srcNode.position.x;
       const dy = tgtNode.position.y - srcNode.position.y;
@@ -75,12 +74,12 @@ function buildEdges(nodes: Node[], codeFunctions: any[]): Edge[] {
         ? (dx > 0 ? Position.Left : Position.Right)
         : (dy > 0 ? Position.Top : Position.Bottom);
       result.push({
-        id: `edge-${srcIdx}-${tgtIdx}-${localIndex}`,
+        id: `edge-${srcNode.id}-${tgtNode.id}-${localIndex}`,
         source: srcNode.id,
-        sourceHandle: `${fnName}-${srcIdx}-${localIndex}`,
+        sourceHandle: `${fnName}-${srcNode.id}-${localIndex}`,
         target: tgtNode.id,
         targetHandle: targetPosition === Position.Top ? 't' : targetPosition === Position.Right ? 'r' : targetPosition === Position.Bottom ? 'b' : 'l',
-        className: `edge-from-${fnName}-${srcIdx}-${localIndex}`,
+        className: `edge-from-${fnName}-${srcNode.id}-${localIndex}`,
         targetPosition,
         sourcePosition: Position.Right,
       } as Edge);
@@ -90,10 +89,10 @@ function buildEdges(nodes: Node[], codeFunctions: any[]): Edge[] {
 }
 
 export default function ProjectCanvas() {
-  const { projectName, updateProjectName, codeFunctions, nodePositions, addCodeFunction, updateCodeFunction, setNodePosition, loadProjectFromFile } = useCodebaseStore();
+  const { projectName, updateProjectName, codeFunctions, addCodeFunction, updateCodeFunction, setNodePosition, loadProjectFromFile } = useCodebaseStore();
   const [isEditingProjectName, setIsEditingProjectName] = useState(false);
   const [editValue, setEditValue] = useState(projectName);
-  const [newlyCreatedNodeIndex, setNewlyCreatedNodeIndex] = useState<number | null>(null);
+  const [newlyCreatedNodeIndex, setNewlyCreatedNodeIndex] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { setViewport, getViewport, screenToFlowPosition } = useReactFlow();
 
@@ -143,9 +142,9 @@ export default function ProjectCanvas() {
   };
 
   // Callback to set auto-focus for newly created nodes
-  const handleSetAutoFocus = useCallback((nodeIndex: number, shouldAutoFocus: boolean = true) => {
+  const handleSetAutoFocus = useCallback((functionId: string, shouldAutoFocus: boolean = true) => {
     if (shouldAutoFocus) {
-      setNewlyCreatedNodeIndex(nodeIndex);
+      setNewlyCreatedNodeIndex(functionId);
       
       // Clear auto-focus after a delay
       setTimeout(() => {
@@ -156,17 +155,17 @@ export default function ProjectCanvas() {
 
   // Create initial nodes from codeFunctions using stored positions
   const initialNodes: Node[] = useMemo(() => {
-    return codeFunctions.map((func, index) => ({
-      id: `method-${index}`,
+    return codeFunctions.map((func) => ({
+      id: func.id,
       type: 'method',
-      position: nodePositions[index], // Use stored position
+      position: func.position,
       data: {
-        methodIndex: index,
-        autoFocusIdentifier: newlyCreatedNodeIndex === index,
+        functionId: func.id,
+        autoFocusIdentifier: newlyCreatedNodeIndex === func.id,
         onSetAutoFocus: handleSetAutoFocus,
       },
     }));
-  }, [codeFunctions, nodePositions, newlyCreatedNodeIndex]);
+  }, [codeFunctions, newlyCreatedNodeIndex, handleSetAutoFocus]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -186,34 +185,23 @@ export default function ProjectCanvas() {
     });
     
     // Create existing nodes array for collision detection with actual heights
-    const existingNodes = codeFunctions.map((func, index) => ({
-      id: `method-${index}`,
-      position: nodePositions[index],
+    const existingNodes = codeFunctions.map((func) => ({
+      id: func.id,
+      position: func.position,
       width: NODE_WIDTH,
       height: calculateNodeHeight(func), // Use actual calculated height based on content
-      data: { methodIndex: index },
+      data: { functionId: func.id },
       type: 'method' as const,
     }));
     
     // Find optimal placement near click position
     const optimalPosition = findOptimalNodePlacement(clickPosition, existingNodes);
 
-    // Create new empty function
-    const newFunction = new CodeFunction(
-      new CodeAspect('', AspectState.UNSET), // Empty identifier to trigger edit mode
-      new CodeAspect('', AspectState.UNSET),
-      new CodeAspect('', AspectState.UNSET),
-      new CodeAspect('', AspectState.UNSET),
-      ''
-    );
-
-    // Add to store with calculated position
-    addCodeFunction(optimalPosition);
-    const newIndex = codeFunctions.length;
-    updateCodeFunction(newIndex, newFunction);
+    // Add to store with calculated position - this returns the new function's ID
+    const newFunctionId = addCodeFunction(optimalPosition);
     
     // Set the newly created node for auto-focus (empty nodes need typing)
-    handleSetAutoFocus(newIndex, true);
+    handleSetAutoFocus(newFunctionId, true);
 
     // Navigate to the newly created node with smooth animation
     setTimeout(() => {
@@ -242,7 +230,7 @@ export default function ProjectCanvas() {
     }, 100); // Small delay to ensure node is rendered
 
     console.log(`Created new empty function at position`, optimalPosition);
-  }, [codeFunctions, nodePositions, addCodeFunction, updateCodeFunction]);
+  }, [codeFunctions, addCodeFunction, handleSetAutoFocus, screenToFlowPosition, getViewport, setViewport]);
 
   // Update React Flow nodes when codeFunctions or nodePositions change (but not during dragging)
   useEffect(() => {
@@ -313,11 +301,8 @@ export default function ProjectCanvas() {
               // ));
             }}
             onNodeDragStop={(e, dragged) => {
-              // Extract the method index from the node ID
-              const methodIndex = parseInt(dragged.id.replace('method-', ''), 10);
-              
-              // Update the store's nodePositions (final persistence)
-              setNodePosition(methodIndex, dragged.position);
+              // Update the store's position using the function ID
+              setNodePosition(dragged.id, dragged.position);
               
               // Ensure React Flow nodes state is updated
               setNodes((nds) => nds.map((n) => (n.id === dragged.id ? dragged : n)));

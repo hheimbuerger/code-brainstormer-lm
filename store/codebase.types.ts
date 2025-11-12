@@ -41,14 +41,18 @@ export class CodeAspect implements CodeAspectData {
 }
 
 export interface CodeFunctionData {
+  id?: string; // Stable unique identifier
   identifier: Partial<CodeAspectData>;
   signature: Partial<CodeAspectData>;
   specification: Partial<CodeAspectData>;
   implementation: Partial<CodeAspectData>;
   code: string;
+  position?: { x: number; y: number }; // Store position with the function
 }
 
 export class CodeFunction {
+  public id: string;
+  public position: { x: number; y: number };
   
   constructor(
     public identifier: CodeAspect = new CodeAspect(),
@@ -56,8 +60,11 @@ export class CodeFunction {
     public specification: CodeAspect = new CodeAspect(),
     public implementation: CodeAspect = new CodeAspect(),
     public code: string = '',
+    id?: string,
+    position?: { x: number; y: number }
   ) {
-    
+    this.id = id || crypto.randomUUID();
+    this.position = position || { x: 0, y: 0 };
   }
 
   // For better string representation in logs and Redux DevTools
@@ -68,11 +75,13 @@ export class CodeFunction {
   // For custom JSON serialization
   toJSON() {
     return {
+      id: this.id,
       identifier: this.identifier,
       signature: this.signature,
       specification: this.specification,
       implementation: this.implementation,
       code: this.code,
+      position: this.position,
       _summary: this.toString()
     };
   }
@@ -87,15 +96,14 @@ export interface CodebaseState {
   // Core data model
   projectName: string;
   codeFunctions: CodeFunction[];
-  nodePositions: { [functionIndex: number]: { x: number; y: number } }; // Store positions for each function
   
   // Core actions
   updateProjectName: (name: string) => void;
-  addCodeFunction: (position: { x: number; y: number }) => void;
-  updateCodeFunction: (index: number, func: Partial<CodeFunction>) => void;
-  removeCodeFunction: (index: number) => void;
+  addCodeFunction: (position: { x: number; y: number }) => string; // Returns the new function's ID
+  updateCodeFunction: (id: string, func: Partial<CodeFunction>) => void;
+  removeCodeFunction: (id: string) => void;
   loadProjectFromFile: () => Promise<void>;
-  setNodePosition: (index: number, position: { x: number; y: number }) => void;
+  setNodePosition: (id: string, position: { x: number; y: number }) => void;
 
   // React Flow state
   nodes: Node<FlowNodeData>[];

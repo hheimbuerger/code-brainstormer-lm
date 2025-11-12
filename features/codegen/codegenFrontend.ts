@@ -28,26 +28,25 @@ export function applyCodegenCommands(initialCmds: CodeGenCommand[]) {
 
     switch (cmd.type) {
       case CommandType.CREATE_METHOD: {
-        store.addCodeFunction();
-        // Retrieve fresh state (after mutation) and its helpers
-        const updatedStore = useCodebaseStore.getState();
-        const newIndex = updatedStore.codeFunctions.length - 1;
+        // addCodeFunction now returns the new function's ID
+        const newFunctionId = store.addCodeFunction({ x: 100, y: 100 }); // Default position, will be adjusted by placement algorithm
+        // Update the newly created function with the provided data
         const newFunction = createCodeFunction(cmd.method);
-        updatedStore.updateCodeFunction(newIndex, newFunction);
+        store.updateCodeFunction(newFunctionId, newFunction);
         // Example: enqueue further commands if needed
         // enqueue(cmdsToEnqueue);
         break;
       }
 
       case CommandType.UPDATE_ASPECT: {
-        const functionIndex = store.codeFunctions.findIndex(
+        const targetFunction = store.codeFunctions.find(
           (f) => f.identifier.descriptor === cmd.methodName
         );
-        if (functionIndex === -1) {
+        if (!targetFunction) {
           console.warn('Could not find function to update:', cmd.methodName);
           break;
         }
-        store.updateCodeFunction(functionIndex, {
+        store.updateCodeFunction(targetFunction.id, {
           [cmd.aspect]: { descriptor: cmd.value, state: AspectState.AUTOGEN },
         });
 
@@ -57,27 +56,27 @@ export function applyCodegenCommands(initialCmds: CodeGenCommand[]) {
       }
 
       case CommandType.DELETE_METHOD: {
-        const methodIndex = store.codeFunctions.findIndex(
+        const targetFunction = store.codeFunctions.find(
           (m) => m.identifier.descriptor === cmd.methodName
         );
-        if (methodIndex === -1) {
+        if (!targetFunction) {
           console.warn('Could not find method to delete:', cmd.methodName);
           break;
         }
-        store.removeCodeFunction(methodIndex);
+        store.removeCodeFunction(targetFunction.id);
         // enqueue(...)
         break;
       }
 
       case CommandType.UPDATE_METHOD_CODE: {
-        const methodIndex = store.codeFunctions.findIndex(
+        const targetFunction = store.codeFunctions.find(
           (m) => m.identifier.descriptor === cmd.methodName
         );
-        if (methodIndex === -1) {
+        if (!targetFunction) {
           console.warn('Could not find method to update code for:', cmd.methodName);
           break;
         }
-        store.updateCodeFunction(methodIndex, { code: cmd.value });
+        store.updateCodeFunction(targetFunction.id, { code: cmd.value });
         // enqueue(...)
         break;
       }

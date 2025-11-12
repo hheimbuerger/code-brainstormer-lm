@@ -54,11 +54,9 @@ const EditableField = ({
   autoFocus = false,
   nodeId,
   fieldName,
-  methodIndex,
 }: EditableFieldProps & {
   nodeId?: string;
   fieldName?: string;
-  methodIndex?: number;
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState(value);
@@ -182,23 +180,22 @@ const EditableField = ({
 
 // Custom node data type that matches what we store in React Flow nodes
 interface FunctionNodeData {
-  methodIndex: number;
+  functionId: string;
   autoFocusIdentifier?: boolean;
-  onSetAutoFocus?: (nodeIndex: number, shouldAutoFocus?: boolean) => void;
+  onSetAutoFocus?: (functionId: string, shouldAutoFocus?: boolean) => void;
 };
 
 type FunctionNodeProps = NodeProps<FunctionNodeData>;
 
 function FunctionNode(props: FunctionNodeProps) {
   const { data, selected } = props;
-  const { methodIndex } = data;
-  const nodeId = `method-${methodIndex}`;
+  const { functionId } = data;
   const updateNodeInternals = useUpdateNodeInternals();
   const { getViewport, setViewport, screenToFlowPosition } = useReactFlow();
   
   // Store references
-  const { codeFunctions, updateCodeFunction, removeCodeFunction, addCodeFunction, nodePositions } = useCodebaseStore();
-  const method = methodIndex !== undefined ? codeFunctions[methodIndex] : undefined;
+  const { codeFunctions, updateCodeFunction, removeCodeFunction, addCodeFunction } = useCodebaseStore();
+  const method = codeFunctions.find((f) => f.id === functionId);
   
   // Local state for processing fields
   const [processingFields, setProcessingFields] = useState<string[]>([]);
@@ -208,20 +205,23 @@ function FunctionNode(props: FunctionNodeProps) {
   // React Query mutation for codegen (moved from EditableField)
   const codegenMutation = useMutation({
     mutationFn: async ({
-      methodIndex,
+      functionId,
       field,
       oldValue,
       newValue,
       aspectsToGenerate,
     }: {
-      methodIndex: number;
+      functionId: string;
       field: string;
       oldValue: string;
       newValue: string;
       aspectsToGenerate: CodeAspectType[];
     }) => {
+      // Find the function index for the codegen API (which still uses indices)
+      const functionIndex = codeFunctions.findIndex((f) => f.id === functionId);
+      if (functionIndex === -1) throw new Error('Function not found');
       // Use the pre-calculated aspectsToGenerate list
-      return invokeCodegenForFunction(methodIndex, field);
+      return invokeCodegenForFunction(functionIndex, field);
     },
     onSuccess: (commands) => {
       // apply the commands to the store
@@ -245,29 +245,29 @@ function FunctionNode(props: FunctionNodeProps) {
 
   // toggle between LOCKED and AUTOGEN for a field
   const toggleAspectState = (aspectKey: 'identifier' | 'signature' | 'specification' | 'implementation') => {
-    if (methodIndex === undefined || !method || isAnyFieldProcessing()) return;
+    if (!method || isAnyFieldProcessing()) return;
     const currentAspect = method[aspectKey];
     const newAspectState = currentAspect.state === AspectState.LOCKED ? AspectState.AUTOGEN : AspectState.LOCKED;
     const newAspect = new CodeAspect(currentAspect.descriptor, newAspectState);
-    updateCodeFunction(methodIndex, { [aspectKey]: newAspect } as Partial<CodeFunction>);
+    updateCodeFunction(functionId, { [aspectKey]: newAspect } as Partial<CodeFunction>);
   };
 
 
 
   // Helper function to trigger codegen for this function's aspect
   const triggerCodegenForFunction = (field: string, oldValue: string, newValue: string, aspectsToGenerate: CodeAspectType[]) => {
-    if (methodIndex === undefined || !method) {
-      console.warn('Cannot trigger codegen: method or methodIndex is undefined');
+    if (!method) {
+      console.warn('Cannot trigger codegen: method is undefined');
       return;
     }
     
     // Set processing fields for UI feedback
-    console.log('Setting processing fields:', aspectsToGenerate, 'for method:', methodIndex);
+    console.log('Setting processing fields:', aspectsToGenerate, 'for function:', functionId);
     setProcessingFields(aspectsToGenerate);
     
     // Use the React Query mutation instead of calling invokeCodegenForFunction directly
     codegenMutation.mutate({
-      methodIndex,
+      functionId,
       field,
       oldValue,
       newValue,
@@ -277,12 +277,11 @@ function FunctionNode(props: FunctionNodeProps) {
 
   // Helper function to delete this function from the codebase
   const handleDeleteFunction = () => {
-    if (methodIndex === undefined) return;
-    removeCodeFunction(methodIndex);
+    removeCodeFunction(functionId);
   };
 
   const handleAspectChange = (aspect: 'identifier' | 'signature' | 'specification' | 'implementation', value: string, oldValue: string) => {
-    if (methodIndex === undefined || !method) return;
+    if (!method) return;
 
     // Helper function to create a new CodeAspect with updated descriptor and set state to EDITED
     const createUpdatedAspect = (aspect: CodeAspect, descriptor: string, newState: AspectState = AspectState.EDITED): CodeAspect => {
@@ -302,8 +301,8 @@ function FunctionNode(props: FunctionNodeProps) {
         console.log(`Renaming function references from '${oldFunctionName}' to '${newFunctionName}'`);
         
         // Update all other functions that reference the old function name
-        codeFunctions.forEach((func, index) => {
-          if (index === methodIndex) return; // Skip the current function being renamed
+        codeFunctions.forEach((func) => {
+          if (func.id === functionId) return; // Skip the current function being renamed
           
           const implementation = func.implementation?.descriptor || '';
           if (!implementation) return;
@@ -315,14 +314,14 @@ function FunctionNode(props: FunctionNodeProps) {
             // Replace all occurrences of the old function name with the new one
             const updatedImplementation = implementation.replace(functionCallRegex, newFunctionName);
             
-            console.log(`Updated function ${index}: ${func.identifier?.descriptor} - replaced '${oldFunctionName}' with '${newFunctionName}'`);
+            console.log(`Updated function ${func.id}: ${func.identifier?.descriptor} - replaced '${oldFunctionName}' with '${newFunctionName}'`);
             
             // Update the function with the new implementation
             // Preserve the original aspect state unless it was UNSET
             const currentState = func.implementation?.state || AspectState.UNSET;
             const newState = currentState === AspectState.UNSET ? AspectState.EDITED : currentState;
             
-            updateCodeFunction(index, {
+            updateCodeFunction(func.id, {
               implementation: new CodeAspect(updatedImplementation, newState)
             });
           }
@@ -348,7 +347,7 @@ function FunctionNode(props: FunctionNodeProps) {
         break;
     }
 
-    updateCodeFunction(methodIndex, updates); // persist aspect edits
+    updateCodeFunction(functionId, updates); // persist aspect edits
 
     // STEP 3: Trigger codegen for subsequent aspects if the value actually changed
     if (value !== oldValue) {
@@ -359,14 +358,14 @@ function FunctionNode(props: FunctionNodeProps) {
 
   // Force React Flow to recalculate handle positions whenever implementation text changes
   useEffect(() => {
-    updateNodeInternals(nodeId);
-  }, [nodeId, method?.implementation?.descriptor, updateNodeInternals]);
+    updateNodeInternals(functionId);
+  }, [functionId, method?.implementation?.descriptor, updateNodeInternals]);
 
   // Check if this is a newly created function that needs codegen (identifier state is AUTOGEN)
   const hasTriggeredCodegen = useRef(false);
   
   useEffect(() => {
-    if (method && methodIndex !== undefined && 
+    if (method && 
         method.identifier.state === AspectState.AUTOGEN && 
         method.identifier.descriptor.trim() !== '' && // Only trigger for non-empty identifiers
         !hasTriggeredCodegen.current) {
@@ -378,7 +377,7 @@ function FunctionNode(props: FunctionNodeProps) {
       const aspectsToGenerate = calculateAspectsToGenerate('identifier' as CodeAspectType, method, false);
       triggerCodegenForFunction('identifier', '', method.identifier.descriptor, aspectsToGenerate);
     }
-  }, [method, methodIndex, codegenMutation]);
+  }, [method, codegenMutation]);
 
 
 
@@ -455,21 +454,21 @@ function FunctionNode(props: FunctionNodeProps) {
           <span
             key={`call-${idx}`}
             className="inline-fn-call existing-function"
-            onMouseEnter={() => handleMouseEnter(`${fnName}-${methodIndex}-${localIndex}`)}
+            onMouseEnter={() => handleMouseEnter(`${fnName}-${functionId}-${localIndex}`)}
             onMouseLeave={handleMouseLeave}
             onDoubleClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              // Find the target function index by name
-              const targetFunctionIndex = codeFunctions.findIndex((f: any) => 
+              // Find the target function by name
+              const targetFunction = codeFunctions.find((f: any) => 
                 f.identifier?.descriptor?.startsWith(fnName)
               );
-              if (targetFunctionIndex !== -1) {
+              if (targetFunction) {
                 // Center viewport on existing function using stored position
-                console.log(`Centering on function: ${fnName} at index ${targetFunctionIndex}`);
+                console.log(`Centering on function: ${fnName} with ID ${targetFunction.id}`);
                 
-                // Get the target node position from store (not DOM)
-                const targetPosition = nodePositions[targetFunctionIndex];
+                // Get the target node position from the function itself
+                const targetPosition = targetFunction.position;
                 if (targetPosition) {
                   // Get current viewport to preserve zoom level
                   const currentViewport = getViewport();
@@ -504,12 +503,12 @@ function FunctionNode(props: FunctionNodeProps) {
             <Handle
               type="source"
               position={Position.Right}
-              id={`${fnName}-${methodIndex}-${localIndex}`}
+              id={`${fnName}-${functionId}-${localIndex}`}
               data-fn-name={fnName}
-              data-handle-id={`${fnName}-${methodIndex}-${localIndex}`}
+              data-handle-id={`${fnName}-${functionId}-${localIndex}`}
               className="inline-fn-handle"
               isConnectable={false}
-              onMouseEnter={() => handleMouseEnter(`${fnName}-${methodIndex}-${localIndex}`)}
+              onMouseEnter={() => handleMouseEnter(`${fnName}-${functionId}-${localIndex}`)}
               onMouseLeave={handleMouseLeave}
             />
           </span>
@@ -531,44 +530,30 @@ function FunctionNode(props: FunctionNodeProps) {
               });
               
               // Create existing nodes array for collision detection
-              const existingNodes = codeFunctions.map((func, index) => ({
-                id: `method-${index}`,
-                position: nodePositions[index],
+              const existingNodes = codeFunctions.map((func) => ({
+                id: func.id,
+                position: func.position,
                 width: NODE_WIDTH,
                 height: calculateNodeHeight(func), // Use actual calculated height based on content
-                data: { methodIndex: index },
+                data: { functionId: func.id },
                 type: 'method' as const,
               }));
               
               // Find optimal placement near click position
               const optimalPosition = findOptimalNodePlacement(clickPosition, existingNodes);
               
-              // Create new function
-              const newFunction = new CodeFunction(
-                new CodeAspect(fnName, AspectState.EDITED),
-                new CodeAspect('', AspectState.UNSET),
-                new CodeAspect('', AspectState.UNSET),
-                new CodeAspect('', AspectState.UNSET),
-                ''
-              );
+              // Add to store with calculated position - this returns the new function's ID
+              const newFunctionId = addCodeFunction(optimalPosition);
               
-              // Add to store with calculated position
-              addCodeFunction(optimalPosition);
-              const newIndex = codeFunctions.length;
-              updateCodeFunction(newIndex, newFunction);
+              // Update with the function name and AUTOGEN state to trigger codegen
+              updateCodeFunction(newFunctionId, {
+                identifier: new CodeAspect(fnName, AspectState.AUTOGEN)
+              });
               
               // Don't auto-focus for named nodes (identifier already filled)
               if (data.onSetAutoFocus) {
-                data.onSetAutoFocus(newIndex, false);
+                data.onSetAutoFocus(newFunctionId, false);
               }
-              
-              // Update the function with the identifier set to AUTOGEN state
-              // This signals to the new function node that it should trigger codegen on mount
-              const updatedFunction = {
-                ...newFunction,
-                identifier: new CodeAspect(fnName, AspectState.AUTOGEN)
-              };
-              updateCodeFunction(newIndex, updatedFunction);
               
               // Navigate to the newly created node with smooth animation
               setTimeout(() => {
@@ -650,9 +635,8 @@ function FunctionNode(props: FunctionNodeProps) {
           placeholder="Enter function name"
           className="method-node__identifier"
           isBold
-          nodeId={nodeId}
+          nodeId={functionId}
           fieldName="identifier"
-          methodIndex={methodIndex}
           isProcessing={isFieldProcessing('identifier')}
           autoFocus={data.autoFocusIdentifier || false}
         />
@@ -668,9 +652,8 @@ function FunctionNode(props: FunctionNodeProps) {
           onSave={(value) => handleAspectChange('signature', value, method?.signature?.descriptor || '')}
           placeholder="return type"
           isItalic
-          nodeId={nodeId}
+          nodeId={functionId}
           fieldName="signature"
-          methodIndex={methodIndex}
           isProcessing={isFieldProcessing('signature')}
         />
         <span className="field-state-icon" onClick={(e)=>{e.stopPropagation(); toggleAspectState('signature');}}>
@@ -692,9 +675,8 @@ function FunctionNode(props: FunctionNodeProps) {
           value={method?.specification?.descriptor || ''}
           onSave={(value) => handleAspectChange('specification', value, method?.specification?.descriptor || '')}
           placeholder="specification"
-          nodeId={nodeId}
+          nodeId={functionId}
           fieldName="specification"
-          methodIndex={methodIndex}
           isProcessing={isFieldProcessing('specification')}
         />
         <span className="field-state-icon" onClick={(e)=>{e.stopPropagation(); toggleAspectState('specification');}}>
