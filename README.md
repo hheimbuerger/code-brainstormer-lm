@@ -2,7 +2,7 @@
 
 **Interactive playground for designing, visualizing and iterating on structured programming code in collaboration with an LLM.**
 
-![Code-Brainstormer LM Screenshot](public/site/screenshot.png)
+![Code-Brainstormer LM Screenshot](site/screenshot.png)
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue) ![Next.js](https://img.shields.io/badge/Next.js-15-black) ![React Flow](https://img.shields.io/badge/React_Flow-11-purple) ![Zustand](https://img.shields.io/badge/Zustand-5-orange)
 
